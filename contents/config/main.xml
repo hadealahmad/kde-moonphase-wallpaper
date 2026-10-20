@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    SPDX-FileCopyrightText: 2026 Hadi Alahmad <hade.alahmad1@gmail.com>
+
+    SPDX-License-Identifier: GPL-2.0-or-later
+-->
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd" >
+  <kcfgfile name=""/>
+
+  <group name="General">
+    <entry name="UpdateIntervalMinutes" type="Int">
+      <label>Minutes between moon phase updates</label>
+      <default>15</default>
+      <min>1</min>
+      <max>1440</max>
+    </entry>
+    <entry name="MoonScale" type="Double">
+      <label>Moon diameter as a fraction of the shorter screen edge</label>
+      <default>0.45</default>
+      <min>0.15</min>
+      <max>0.90</max>
+    </entry>
+    <entry name="BackgroundColor" type="Color">
+      <label>Wallpaper background color</label>
+      <default>#05070d</default>
+    </entry>
+    <entry name="EarthshineIntensity" type="Double">
+      <label>Brightness of the earthshine on the unlit side of the Moon</label>
+      <default>0.035</default>
+      <min>0.0</min>
+      <max>0.15</max>
+    </entry>
+    <entry name="CraterReliefStrength" type="Double">
+      <label>Strength of the crater relief shading</label>
+      <default>1.2</default>
+      <min>0.0</min>
+      <max>2.5</max>
+    </entry>
+    <entry name="SouthernHemisphereFlip" type="Bool">
+      <label>Flip the view for the southern hemisphere</label>
+      <default>false</default>
+    </entry>
+    <entry name="ShowTelemetryOverlay" type="Bool">
+      <label>Show the telemetry overlay</label>
+      <default>true</default>
+    </entry>
+    <entry name="DebugTimeOverrideEnabled" type="Bool">
+      <label>Preview a manually selected moon phase</label>
+      <default>false</default>
+    </entry>
+    <entry name="DebugPhaseValue" type="Double">
+      <label>Normalized moon phase (0 = new, 0.25 = first quarter, 0.5 = full, 0.75 = last quarter, 1 = new)</label>
+      <default>0.35</default>
+      <min>0.0</min>
+      <max>1.0</max>
+    </entry>
+    <entry name="ShowOrbitWidget" type="Bool">
+      <label>Show the bottom-left orbit and seasons widget</label>
+      <default>true</default>
+    </entry>
+    <entry name="ShowEarthWidget" type="Bool">
+      <label>Show the bottom-right Earth globe widget</label>
+      <default>true</default>
+    </entry>
+    <entry name="CornerWidgetSize" type="Int">
+      <label>Corner widget size in pixels</label>
+      <default>230</default>
+      <min>140</min>
+      <max>400</max>
+    </entry>
+    <entry name="CornerMargin" type="Int">
+      <label>Corner widget screen margin in pixels</label>
+      <default>36</default>
+      <min>16</min>
+      <max>96</max>
+    </entry>
+    <entry name="ObserverLatitude" type="Double">
+      <label>Observer latitude in degrees (positive north)</label>
+      <default>30.0</default>
+      <min>-90.0</min>
+      <max>90.0</max>
+    </entry>
+    <entry name="ObserverLongitude" type="Double">
+      <label>Observer longitude in degrees (positive east)</label>
+      <default>31.2</default>
+      <min>-180.0</min>
+      <max>180.0</max>
+    </entry>
+    <entry name="ShowObserverPin" type="Bool">
+      <label>Show the observer location pin on the Earth globe</label>
+      <default>true</default>
+    </entry>
+    <entry name="ShowSeasonalGhostEarths" type="Bool">
+      <label>Show seasonal ghost Earths along the orbit</label>
+      <default>true</default>
+    </entry>
+    <entry name="DebugDayOfYearOverride" type="Double">
+      <label>Preview day of year (1 = January 1)</label>
+      <default>292.0</default>
+      <min>1.0</min>
+      <max>365.25</max>
+    </entry>
+    <entry name="DebugUTCHourOverride" type="Double">
+      <label>Preview UTC time of day in hours</label>
+      <default>19.0</default>
+      <min>0.0</min>
+      <max>24.0</max>
+    </entry>
+  </group>
+
+</kcfg>
