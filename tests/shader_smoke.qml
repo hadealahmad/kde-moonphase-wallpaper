@@ -16,9 +16,9 @@
 // On success it writes /tmp/opencode/shader_smoke/moon_smoke.png and quits.
 // The 2x2 grid is: full moon, first quarter, waxing crescent (earthshine),
 // full moon with libration (+lon, +lat) and roll +0.4 rad.
-// The 512x128 strip underneath loads background.frag.qsb twice (winter and
-// summer motifs), and the last row renders OrbitWidget + EarthWidget, so a
-// single run loads all four compiled shaders: moon, background, orbit, earth.
+// The 512x128 strip underneath loads background.frag.qsb twice (Planisphere
+// and Astrolabe Etching styles), and the last row renders OrbitWidget +
+// EarthWidget, so a single run loads all four compiled shaders.
 
 import QtQuick
 import QtQuick.Window
@@ -162,7 +162,7 @@ Window {
             }
         }
 
-        // --- background.frag.qsb: winter and summer motifs ----------------
+        // --- background.frag.qsb: Planisphere and Astrolabe Etching motifs
         // Loads the seasonal shader through the real wrapper component so the
         // UBO layout, the .qsb file and the fallback path are all exercised.
         Row {
@@ -174,7 +174,8 @@ Window {
                 width: 256
                 height: 128
                 baseColor: "#05070d"
-                seasonIndex: 3          // Winter: snow + bokeh crystals
+                seasonIndex: 3          // Winter
+                styleMode: 0            // Celestial Planisphere (Concept 1)
                 animate: false
                 time: 42.0
                 intensity: 0.75
@@ -185,7 +186,8 @@ Window {
                 width: 256
                 height: 128
                 baseColor: "#05070d"
-                seasonIndex: 1          // Summer: sparse moonlit cirrus
+                seasonIndex: 1          // Summer
+                styleMode: 1            // Astrolabe & Seasonal Etchings (Concept 3)
                 animate: false
                 time: 42.0
                 intensity: 0.75

@@ -38,6 +38,7 @@ Kirigami.FormLayout {
     property alias cfg_DebugDayOfYearOverride: debugDaySlider.value
     property alias cfg_DebugUTCHourOverride: debugUtcSlider.value
     property alias cfg_SeasonalBackgroundMode: seasonalModeCombo.currentIndex
+    property alias cfg_SeasonalBackgroundStyle: seasonalStyleCombo.currentIndex
     property alias cfg_SeasonalBackgroundAnimate: seasonalAnimateCheck.checked
     property alias cfg_SeasonalBackgroundIntensity: seasonalIntensitySlider.value
     property alias cfg_SeasonalBackgroundFps: seasonalFpsSpin.value
@@ -80,7 +81,7 @@ Kirigami.FormLayout {
         const date = new Date(2025, 0, 1);
         date.setDate(Math.max(1, Math.min(365, Math.round(day))));
         return i18nd("plasma_wallpaper_org.kde.moonphase",
-                     "Day %1 · %2",
+                     "Day %1 \u00b7 %2",
                      Math.round(day),
                      Qt.formatDate(date, "MMM d"));
     }
@@ -192,16 +193,35 @@ Kirigami.FormLayout {
         // 0 = Auto, 1..4 = Spring..Winter, 5 = Off.
         model: [
             i18nd("plasma_wallpaper_org.kde.moonphase", "Automatic (Follow Season)"),
-            i18nd("plasma_wallpaper_org.kde.moonphase", "Spring (Blossoms)"),
-            i18nd("plasma_wallpaper_org.kde.moonphase", "Summer (Sparse Clouds)"),
-            i18nd("plasma_wallpaper_org.kde.moonphase", "Autumn (Falling Leaves)"),
-            i18nd("plasma_wallpaper_org.kde.moonphase", "Winter (Snow)"),
+            i18nd("plasma_wallpaper_org.kde.moonphase", "Spring"),
+            i18nd("plasma_wallpaper_org.kde.moonphase", "Summer"),
+            i18nd("plasma_wallpaper_org.kde.moonphase", "Autumn"),
+            i18nd("plasma_wallpaper_org.kde.moonphase", "Winter"),
             i18nd("plasma_wallpaper_org.kde.moonphase", "Off (Solid Color)")
         ]
 
         Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Seasonal background")
         Accessible.description: i18nd("plasma_wallpaper_org.kde.moonphase",
                                       "Automatic follows the current season. Choose Off for a plain solid background.")
+    }
+
+    QQC2.ComboBox {
+        id: seasonalStyleCombo
+
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Background style:")
+        enabled: seasonalModeCombo.currentIndex !== 5
+
+        // Index order must match the SeasonalBackgroundStyle config entry:
+        // 0 = Celestial Planisphere, 1 = Astrolabe & Seasonal Etchings, 2 = Combined.
+        model: [
+            i18nd("plasma_wallpaper_org.kde.moonphase", "Celestial Planisphere & Star Chart"),
+            i18nd("plasma_wallpaper_org.kde.moonphase", "Astrolabe & Engraved Seasonal Etchings"),
+            i18nd("plasma_wallpaper_org.kde.moonphase", "Combined (Planisphere + Etchings)")
+        ]
+
+        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Background style")
+        Accessible.description: i18nd("plasma_wallpaper_org.kde.moonphase",
+                                      "Choose between the celestial star chart planisphere, engraved seasonal corner etchings, or both.")
     }
 
     RowLayout {
@@ -444,7 +464,7 @@ Kirigami.FormLayout {
     QQC2.DoubleSpinBox {
         id: observerLatitudeSpin
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Observer latitude (°N):")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Observer latitude (\u00b0N):")
 
         from: -90.0
         to: 90.0
@@ -467,7 +487,7 @@ Kirigami.FormLayout {
     QQC2.DoubleSpinBox {
         id: observerLongitudeSpin
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Observer longitude (°E):")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Observer longitude (\u00b0E):")
 
         from: -180.0
         to: 180.0
@@ -499,8 +519,8 @@ Kirigami.FormLayout {
         id: seasonalGhostsCheck
 
         Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Seasonal markers:")
-        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Show seasonal ghost Earths")
-        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Show seasonal ghost Earths")
+        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Show seasonal cardinal markers")
+        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Show seasonal cardinal markers")
     }
 
     Kirigami.Heading {
@@ -563,7 +583,7 @@ Kirigami.FormLayout {
         enabled: root.debugEnabled
         Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Simulated:")
         text: i18nd("plasma_wallpaper_org.kde.moonphase",
-                    "%1 · %2% illuminated",
+                    "%1 \u00b7 %2% illuminated",
                     root.phaseName(debugPhaseSlider.value),
                     Math.round(root.illuminationFraction(debugPhaseSlider.value) * 100))
         Accessible.name: text
@@ -575,7 +595,7 @@ Kirigami.FormLayout {
         opacity: 0.7
         wrapMode: Text.Wrap
         text: i18nd("plasma_wallpaper_org.kde.moonphase",
-                    "Normalized phase — 0% New · 25% First Quarter · 50% Full · 75% Last Quarter · 100% New")
+                    "Normalized phase \u2014 0% New \u00b7 25% First Quarter \u00b7 50% Full \u00b7 75% Last Quarter \u00b7 100% New")
         Kirigami.FormData.isSection: true
         Accessible.name: text
     }
@@ -592,7 +612,7 @@ Kirigami.FormLayout {
         opacity: 0.7
         wrapMode: Text.Wrap
         text: i18nd("plasma_wallpaper_org.kde.moonphase",
-                    "These controls take effect when “Preview manual moon phase” above is enabled.")
+                    "These controls take effect when \u201cPreview manual moon phase\u201d above is enabled.")
         Kirigami.FormData.isSection: true
         Accessible.name: text
     }

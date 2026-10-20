@@ -1,403 +1,286 @@
 #version 440
 
-// ============================================================================
-//  KDE Plasma 6 wallpaper - seasonal background shader
-// ============================================================================
-//
-//  Single pass, procedural, no textures. Renders one of four motifs chosen by
-//  seasonIndex:
-//
-//      0.0  Spring   floating cherry blossoms, warm rose/violet corner glow
-//      1.0  Summer   sparse high-altitude cirrus, cool moonlight, fireflies
-//      2.0  Autumn   falling golden / amber / russet leaves, ochre edge glow
-//      3.0  Winter   falling snow, soft bokeh + crisp six-fold crystals
-//
-//  Design constraints:
-//    * low GPU cost: no texture fetches, no derivatives, fixed loop counts,
-//      a single full-screen pass at the wallpaper's native size.
-//    * GLSL 100 es / 120 / 150, HLSL 5.0 and Metal 1.2 safe: no fwidth(),
-//      no dFdx()/dFdy(), no bitwise operators, no uint, no non-constant
-//      array indexing, every loop bound is a compile-time constant.
-//    * Particles are laid out on screen-space grids so their density is
-//      independent of resolution; per-cell hashes drive culling, phase and
-//      colour so no two flakes / petals / leaves look alike.
-//
-//  Coordinate / sign conventions:
-//    * qt_TexCoord0: (0,0) top-left, y grows DOWN.
-//    * p: aspect-corrected, centred on the Moon. x in [-aspect/2, aspect/2],
-//      y in [-0.5, 0.5]. Positive y is DOWN.
-//    * "drift up" means the pattern moves toward the top of the screen, which
-//      is a *decreasing* screen y, so the sampling coordinate is advanced by
-//      +time * speed (f(x - vt) sampled as f(x + vt) with y pointing down).
-//
-//  Output is opaque, premultiplied alpha as Qt Quick expects.
-//
-//  Build:
-//    make shader
-//  or directly:
-//    qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 \
-//        -o contents/shaders/background.frag.qsb contents/shaders/background.frag
-// ============================================================================
-
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;
 
 layout(std140, binding = 0) uniform buf {
-    mat4  qt_Matrix;
+    mat4 qt_Matrix;
     float qt_Opacity;
-    vec4  baseColor;          // User's BackgroundColor (rgb)
-    float seasonIndex;        // 0.0=Spring, 1.0=Summer, 2.0=Autumn, 3.0=Winter
-    float time;               // Monotonic animation seconds
-    float aspectRatio;        // width / height
-    float intensity;          // 0.0..1.0 user density/opacity multiplier
-    float moonIllumination;   // 0.0..1.0 (0=New Moon, 1=Full Moon)
-};
+    vec4 baseColor;
+    float seasonIndex;
+    float time;
+    float aspectRatio;
+    float intensity;
+    float moonIllumination;
+    float styleMode;
+} ubuf;
 
-const float TAU = 6.28318530717958647692;
+const float PI = 3.14159265358979323846;
+const float TWO_PI = 6.28318530717958647692;
 
-// ---------------------------------------------------------------------------
-//  Hashes. Cheap sin-based white noise; the inputs are small cell indices, so
-//  the usual sin() precision caveat does not bite here.
-// ---------------------------------------------------------------------------
-float hash21(vec2 p)
-{
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+float hash21(vec2 p) {
+    p = fract(p * vec2(123.34, 456.21));
+    p += dot(p, p + 45.32);
+    return fract(p.x * p.y);
 }
 
-vec2 hash22(vec2 p)
-{
-    return vec2(hash21(p),
-                hash21(p + vec2(19.19, 7.77)));
+vec2 hash22(vec2 p) {
+    float n = hash21(p);
+    return vec2(n, hash21(p + n + 17.3));
 }
 
-// Right-handed 2D rotation, column-vector convention.
-vec2 rot2(vec2 v, float a)
-{
-    float c = cos(a);
-    float s = sin(a);
-    return vec2(c * v.x - s * v.y, s * v.x + c * v.y);
+float sdSegment(vec2 p, vec2 a, vec2 b) {
+    vec2 pa = p - a;
+    vec2 ba = b - a;
+    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
+    return length(pa - ba * h);
 }
 
-// ---------------------------------------------------------------------------
-//  Value noise + four-octave fBm, used only by the summer cirrus.
-//  Loop bounds are literal constants so this unrolls identically everywhere.
-// ---------------------------------------------------------------------------
-float vnoise(vec2 p)
-{
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-
-    float a = hash21(i);
-    float b = hash21(i + vec2(1.0, 0.0));
-    float c = hash21(i + vec2(0.0, 1.0));
-    float d = hash21(i + vec2(1.0, 1.0));
-
-    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+float drawEdge(vec2 p, vec2 a, vec2 b) {
+    float d = sdSegment(p, a, b);
+    float line = exp(-pow(d / 0.0014, 2.0)) * 0.26;
+    float nodeA = exp(-pow(length(p - a) / 0.0055, 2.0)) * 0.90;
+    float nodeB = exp(-pow(length(p - b) / 0.0055, 2.0)) * 0.90;
+    float ringA = exp(-pow((length(p - a) - 0.011) / 0.0014, 2.0)) * 0.35;
+    float ringB = exp(-pow((length(p - b) - 0.011) / 0.0014, 2.0)) * 0.35;
+    return max(line, max(max(nodeA, nodeB), max(ringA, ringB)));
 }
 
-float fbm4(vec2 p)
-{
-    float v = 0.0;
-    float amp = 0.5;
-    for (int i = 0; i < 4; ++i) {
-        v += amp * vnoise(p);
-        p = p * 2.03 + vec2(37.1, 17.7);
-        amp *= 0.5;
+float starLayer(vec2 p, float scale, float density, float t) {
+    vec2 gv = p * scale;
+    vec2 id = floor(gv);
+    vec2 f = fract(gv) - 0.5;
+    vec2 rnd = hash22(id);
+    if (rnd.x > density) {
+        return 0.0;
     }
-    return v * 1.0666667;   // 1 / (0.5 + 0.25 + 0.125 + 0.0625)
+    vec2 offset = (rnd - 0.5) * 0.72;
+    float d = length(f - offset);
+    float size = mix(0.018, 0.052, rnd.y * rnd.y);
+    float twinkle = 0.82 + 0.18 * sin(t * 0.8 + rnd.x * 40.0);
+    float core = exp(-pow(d / size, 2.0)) * twinkle;
+    float spike = 0.0;
+    if (rnd.y > 0.88) {
+        vec2 q = abs(f - offset);
+        spike = (exp(-q.x * 90.0) * exp(-q.y * 12.0) + exp(-q.y * 90.0) * exp(-q.x * 12.0)) * 0.35;
+    }
+    return (core + spike) * (0.28 + 0.72 * rnd.y);
 }
 
-// ===========================================================================
-//  Spring: one parallax layer of floating cherry blossoms.
-// ===========================================================================
-vec4 blossomLayer(vec2 p, float scale, float rise, float drift,
-                  float size, float seed, float keep, float weight, float t)
-{
-    // Grid space: one unit == one cell. The whole grid drifts up and right.
-    vec2 sp = p * scale;
-    sp.y += t * rise * scale;
-    sp.x -= t * drift * scale;
-    // Gentle sinusoidal sway, per row, so the drift never looks mechanical.
-    sp.x += sin(sp.y * 1.7 + seed * 5.0 + t * 0.35) * 0.16;
+// Concept 1: Celestial Planisphere & Star Chart
+vec3 evalPlanisphere(vec2 p, float r, float theta, int season, float t) {
+    vec3 colSilver = vec3(0.82, 0.86, 0.94);
+    vec3 colWarm   = vec3(0.95, 0.89, 0.74);
+    vec3 colSlate  = vec3(0.45, 0.52, 0.66);
 
-    vec2 cell = floor(sp);
-    vec2 f = fract(sp) - 0.5;
+    float moonKeepout = smoothstep(0.22, 0.27, r);
+    vec3 add = vec3(0.0);
 
-    float h = hash21(cell + seed * 13.37);
-    if (h < 0.45)
-        return vec4(0.0);                     // cull ~45 % of the cells
+    // Concentric celestial coordinate circles
+    float r1 = exp(-pow((r - 0.265) / 0.0014, 2.0)) * 0.32;
+    float r2 = exp(-pow((r - 0.420) / 0.0012, 2.0)) * 0.18;
+    float r3 = exp(-pow((r - 0.620) / 0.0012, 2.0)) * 0.14;
+    float r4 = exp(-pow((r - 0.840) / 0.0012, 2.0)) * 0.10;
+    add += colSlate * (r1 + r2 + r3 + r4);
 
-    // Coarse 2x2 block mask: blossoms gather in drifts instead of blanketing
-    // the whole sky, which keeps the field readable and the centre calm.
-    if (hash21(floor(cell * 0.5) + seed * 47.1) > keep)
-        return vec4(0.0);
+    // Fine degree ticks around the inner Moon framing ring (r = 0.265)
+    float nTicks = 72.0;
+    float stepA = TWO_PI / nTicks;
+    float idx = floor((theta + 0.5 * stepA) / stepA);
+    float ang = idx * stepA;
+    float dAng = abs(atan(sin(theta - ang), cos(theta - ang))) * r;
+    bool major = mod(idx, 6.0) < 0.5;
+    float tLen = major ? 0.012 : 0.005;
+    float tick = (1.0 - smoothstep(tLen * 0.8, tLen, abs(r - 0.265)))
+               * exp(-pow(dAng / 0.0012, 2.0)) * (major ? 0.38 : 0.18);
+    add += colSilver * tick;
 
-    vec2 rnd = hash22(cell + seed * 3.17);
-    vec2 q = f - (rnd - 0.5) * 0.55;
+    // 12 radial hour-angle lines broken inside r = 0.265
+    float hStep = TWO_PI / 12.0;
+    float hIdx = floor((theta + 0.5 * hStep) / hStep);
+    float hAng = hIdx * hStep;
+    float hPerp = abs(atan(sin(theta - hAng), cos(theta - hAng))) * r;
+    float hLine = exp(-pow(hPerp / 0.0011, 2.0))
+                * smoothstep(0.275, 0.30, r)
+                * (1.0 - smoothstep(0.82, 0.92, r)) * 0.09;
+    add += colSlate * hLine;
 
-    q = rot2(q, t * 0.35 + h * TAU);
+    // Slow celestial sphere rotation when animated
+    float rot = t * 0.004;
+    mat2 R = mat2(cos(rot), -sin(rot), sin(rot), cos(rot));
+    vec2 pStar = R * p;
 
-    float ang = atan(q.y, q.x) + t * 0.35 + h * TAU;
-    float rad = length(q);
+    // Pinpoint starfield layers
+    float s1 = starLayer(pStar, 14.0, 0.38, t);
+    float s2 = starLayer(pStar + vec2(3.7, 1.9), 28.0, 0.25, t);
+    float s3 = starLayer(pStar + vec2(8.1, 5.4), 52.0, 0.18, t);
+    vec3 starCol = mix(colSilver, colWarm, 0.35) * (s1 * 0.65 + s2 * 0.42 + s3 * 0.25);
+    add += starCol * moonKeepout;
 
-    float sizeVar = 0.70 + 0.55 * rnd.y;
-    float petalRadius = size * sizeVar * (0.68 + 0.32 * cos(5.0 * ang));
+    // Seasonal Constellations (left & right celestial wings)
+    float cMask = 0.0;
+    if (season == 0) {
+        // SPRING: Leo (left) & Virgo (right)
+        cMask = max(cMask, drawEdge(p, vec2(-0.68, 0.12), vec2(-0.54, 0.16)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.54, 0.16), vec2(-0.46, 0.26)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.46, 0.26), vec2(-0.52, 0.35)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.52, 0.35), vec2(-0.60, 0.32)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.54, 0.16), vec2(-0.38, 0.10)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.38, 0.10), vec2(-0.46, 0.26)));
 
-    float aa = max(0.004, 0.14 * size);
-    float mask = 1.0 - smoothstep(-aa, aa, rad - petalRadius);
-    if (mask <= 0.0)
-        return vec4(0.0);
+        cMask = max(cMask, drawEdge(p, vec2(0.42, 0.08), vec2(0.55, 0.18)));
+        cMask = max(cMask, drawEdge(p, vec2(0.55, 0.18), vec2(0.66, 0.14)));
+        cMask = max(cMask, drawEdge(p, vec2(0.55, 0.18), vec2(0.58, 0.31)));
+        cMask = max(cMask, drawEdge(p, vec2(0.66, 0.14), vec2(0.75, 0.24)));
+    } else if (season == 1) {
+        // SUMMER: Cygnus (left) & Lyra (right)
+        cMask = max(cMask, drawEdge(p, vec2(-0.66, 0.34), vec2(-0.55, 0.22)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.55, 0.22), vec2(-0.43, 0.09)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.67, 0.13), vec2(-0.55, 0.22)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.55, 0.22), vec2(-0.44, 0.31)));
 
-    // Pastel sakura pink at the rim fading to cream near the heart.
-    vec3 pink  = vec3(0.96, 0.72, 0.82);
-    vec3 cream = vec3(1.00, 0.91, 0.94);
-    float shade = clamp(rad / max(petalRadius, 1e-3), 0.0, 1.0);
-    vec3 petal = mix(cream, pink, smoothstep(0.10, 0.92, shade));
+        cMask = max(cMask, drawEdge(p, vec2(0.46, 0.32), vec2(0.54, 0.25)));
+        cMask = max(cMask, drawEdge(p, vec2(0.54, 0.25), vec2(0.64, 0.27)));
+        cMask = max(cMask, drawEdge(p, vec2(0.64, 0.27), vec2(0.60, 0.15)));
+        cMask = max(cMask, drawEdge(p, vec2(0.60, 0.15), vec2(0.50, 0.13)));
+        cMask = max(cMask, drawEdge(p, vec2(0.50, 0.13), vec2(0.54, 0.25)));
+    } else if (season == 2) {
+        // AUTUMN: Pegasus Great Square (left) & Cassiopeia W (right)
+        cMask = max(cMask, drawEdge(p, vec2(-0.68, 0.30), vec2(-0.48, 0.33)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.48, 0.33), vec2(-0.45, 0.14)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.45, 0.14), vec2(-0.65, 0.11)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.65, 0.11), vec2(-0.68, 0.30)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.48, 0.33), vec2(-0.37, 0.40)));
 
-    // Warm golden stamen dot.
-    float stamen = 1.0 - smoothstep(size * 0.05, size * 0.17, rad);
-    petal = mix(petal, vec3(0.99, 0.84, 0.42), stamen);
-
-    float a = mask * weight * (0.65 + 0.35 * rnd.x);
-    return vec4(petal * a, a);
-}
-
-// ===========================================================================
-//  Autumn: one parallax layer of tumbling leaves.
-// ===========================================================================
-vec4 leafLayer(vec2 p, float scale, float fall, float wind,
-               float size, float seed, float keep, float weight, float t)
-{
-    vec2 sp = p * scale;
-    sp.y -= t * fall * scale;                 // pattern falls downward
-    sp.x -= t * wind * scale;                 // and drifts right
-    sp.x += sin(sp.y * 1.35 + seed * 4.0 + t * 0.5) * 0.20;
-
-    vec2 cell = floor(sp);
-    vec2 f = fract(sp) - 0.5;
-
-    float h = hash21(cell + seed * 5.11);
-    if (h < 0.38)
-        return vec4(0.0);
-
-    if (hash21(floor(cell * 0.5) + seed * 31.7) > keep)
-        return vec4(0.0);
-
-    vec2 rnd = hash22(cell + seed * 9.73);
-    vec2 q = f - (rnd - 0.5) * 0.50;
-
-    // Spin about the leaf normal, then squash x to fake a 3D tumble.
-    float phase = h * TAU;
-    q = rot2(q, t * (0.35 + 0.60 * h) + phase);
-
-    float flutter = max(0.32, abs(cos(t * (1.10 + h) + phase)));
-    q.x /= flutter;
-
-    float rad = size * (0.78 + 0.40 * rnd.y);
-    float off = rad * 0.64;
-
-    // Vesica / pointed-leaf SDF: intersection of two offset circles.
-    float d = max(length(q - vec2(off, 0.0)) - rad,
-                  length(q + vec2(off, 0.0)) - rad);
-
-    float aa = max(0.004, 0.08 * size);
-    float mask = 1.0 - smoothstep(-aa, aa, d);
-    if (mask <= 0.0)
-        return vec4(0.0);
-
-    // Faint central vein along the long axis.
-    float vein = (1.0 - smoothstep(0.0, aa * 1.8, abs(q.y))) * mask;
-
-    vec3 gold   = vec3(0.95, 0.74, 0.20);
-    vec3 amber  = vec3(0.88, 0.48, 0.15);
-    vec3 russet = vec3(0.76, 0.32, 0.14);
-
-    vec3 leaf = mix(gold, amber, smoothstep(0.20, 0.72, h));
-    leaf = mix(leaf, russet, smoothstep(0.62, 0.95, h) * 0.85);
-    leaf = mix(leaf, gold * 1.05, vein * 0.35);
-    leaf = mix(leaf, russet, vein * 0.18);
-
-    float a = mask * weight * (0.86 + 0.14 * rnd.x);
-    return vec4(leaf * a, a);
-}
-
-// ===========================================================================
-//  Winter: one parallax layer of snow. starFlag <= 0.5 -> soft bokeh disk,
-//  starFlag > 0.5 -> crisp six-fold crystal.
-// ===========================================================================
-vec4 snowLayer(vec2 p, float scale, float fall, float sizeBase,
-               float starFlag, float seed, float keep, float weight, float t)
-{
-    vec2 sp = p * scale;
-    sp.y -= t * fall * scale;                 // pattern falls downward
-    sp.x += sin(sp.y * 0.9 + seed * 3.0 + t * 0.6) * 0.18;
-
-    vec2 cell = floor(sp);
-    vec2 f = fract(sp) - 0.5;
-
-    float h = hash21(cell + seed * 11.1);
-    if (h < 0.38)
-        return vec4(0.0);
-
-    if (hash21(floor(cell * 0.5) + seed * 53.9) > keep)
-        return vec4(0.0);
-
-    vec2 rnd = hash22(cell + seed * 2.37);
-    vec2 q = f - (rnd - 0.5) * 0.55;
-
-    float rad = length(q);
-    float spin = t * 0.45 + h * TAU;
-
-    vec3 ice = vec3(0.86, 0.93, 1.00);
-    float a;
-
-    if (starFlag > 0.5) {
-        // Six-fold crystal star, crisp edge with a tiny soft core.
-        float ang = atan(q.y, q.x) + spin;
-        float size = sizeBase * (0.80 + 0.35 * rnd.y);
-        float star = size * (0.55 + 0.45 * cos(6.0 * ang));
-        float aa = max(0.002, 0.05 * size);
-        float arms = 1.0 - smoothstep(-aa, aa, rad - star);
-        float core = 1.0 - smoothstep(size * 0.10, size * 0.34, rad);
-        a = max(arms * 0.92, core) * weight;
-        ice = vec3(0.86, 0.93, 1.0);
+        cMask = max(cMask, drawEdge(p, vec2(0.42, 0.32), vec2(0.50, 0.21)));
+        cMask = max(cMask, drawEdge(p, vec2(0.50, 0.21), vec2(0.58, 0.27)));
+        cMask = max(cMask, drawEdge(p, vec2(0.58, 0.27), vec2(0.66, 0.16)));
+        cMask = max(cMask, drawEdge(p, vec2(0.66, 0.16), vec2(0.75, 0.25)));
     } else {
-        // Bokeh: soft disk, brightness rising toward the centre.
-        float size = sizeBase * (0.70 + 0.55 * rnd.y);
-        float disk = 1.0 - smoothstep(size * 0.20, size, rad);
-        a = disk * weight * (0.55 + 0.45 * rnd.x);
-        ice = vec3(0.84, 0.92, 1.0) * (0.92 + 0.08 * h);
-    }
+        // WINTER: Orion (left) & Taurus/Hyades (right)
+        cMask = max(cMask, drawEdge(p, vec2(-0.64, 0.35), vec2(-0.48, 0.32)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.64, 0.35), vec2(-0.58, 0.21)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.48, 0.32), vec2(-0.52, 0.20)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.58, 0.21), vec2(-0.52, 0.20)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.58, 0.21), vec2(-0.62, 0.07)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.52, 0.20), vec2(-0.46, 0.06)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.62, 0.07), vec2(-0.46, 0.06)));
 
-    if (a <= 0.0)
-        return vec4(0.0);
-    return vec4(ice * a, a);
+        cMask = max(cMask, drawEdge(p, vec2(0.44, 0.14), vec2(0.55, 0.22)));
+        cMask = max(cMask, drawEdge(p, vec2(0.55, 0.22), vec2(0.68, 0.31)));
+        cMask = max(cMask, drawEdge(p, vec2(0.44, 0.14), vec2(0.57, 0.16)));
+        cMask = max(cMask, drawEdge(p, vec2(0.57, 0.16), vec2(0.72, 0.21)));
+    }
+    add += mix(colSilver, colWarm, 0.45) * cMask * moonKeepout;
+    return add;
 }
 
-// ===========================================================================
-void main()
-{
+// Concept 3: Engraved Astrolabe & Seasonal Wireframe Etchings
+vec3 evalAstrolabeEtching(vec2 p, float r, float theta, int season, float t) {
+    vec3 colSilver = vec3(0.82, 0.86, 0.94);
+    vec3 colWarm   = vec3(0.95, 0.89, 0.74);
+    vec3 colSlate  = vec3(0.48, 0.55, 0.68);
+
+    vec3 add = vec3(0.0);
+
+    // Central Astrolabe Moon Frame
+    float rInner = exp(-pow((r - 0.258) / 0.0014, 2.0)) * 0.42;
+    float rOuter = exp(-pow((r - 0.278) / 0.0012, 2.0)) * 0.28;
+    add += colSilver * (rInner + rOuter);
+
+    float nTicks = 120.0;
+    float stepA = TWO_PI / nTicks;
+    float idx = floor((theta + 0.5 * stepA) / stepA);
+    float ang = idx * stepA;
+    float dAng = abs(atan(sin(theta - ang), cos(theta - ang))) * r;
+    bool major = mod(idx, 10.0) < 0.5;
+    float inBand = smoothstep(0.258, 0.261, r) * (1.0 - smoothstep(major ? 0.276 : 0.270, major ? 0.278 : 0.272, r));
+    float tick = inBand * exp(-pow(dAng / 0.0010, 2.0)) * (major ? 0.45 : 0.20);
+    add += mix(colSilver, colWarm, major ? 0.5 : 0.0) * tick;
+
+    float cardAng = mod(theta + PI * 0.25, PI * 0.5) - PI * 0.25;
+    float cardPerp = abs(sin(cardAng)) * r;
+    float cardLine = exp(-pow(cardPerp / 0.0011, 2.0))
+                   * smoothstep(0.282, 0.295, r)
+                   * (1.0 - smoothstep(0.36, 0.42, r)) * 0.25;
+    add += colWarm * cardLine;
+
+    // Seasonal Engraved Corner Etchings (keep center & bottom widgets clear)
+    float centerClear = smoothstep(0.38, 0.54, r);
+    float bottomCornerClear = smoothstep(0.18, 0.34, length(p - vec2(-0.72, -0.34)))
+                            * smoothstep(0.18, 0.34, length(p - vec2( 0.72, -0.34)));
+    float cornerFade = smoothstep(0.32, 0.85, length(p * vec2(0.85, 1.15)))
+                     * centerClear * bottomCornerClear;
+
+    vec2 q = vec2(abs(p.x), p.y);
+    vec2 focal = vec2(0.76, 0.36);
+    vec2 d = q - focal;
+    float dr = length(d);
+    float da = atan(d.y, d.x) + t * 0.015;
+
+    float etching = 0.0;
+    if (season == 0) {
+        // SPRING: Engraved botanical rosette contour lines
+        float petal = dr + 0.055 * cos(5.0 * da) + 0.018 * cos(10.0 * da);
+        float rings = abs(fract(petal * 18.0) - 0.5);
+        etching = exp(-pow(rings / 0.045, 2.0)) * (1.0 - smoothstep(0.15, 0.62, dr));
+    } else if (season == 1) {
+        // SUMMER: Two-source harmonic interference ripples
+        float d1 = length(q - vec2(0.78, 0.38));
+        float d2 = length(q - vec2(0.52, 0.44));
+        float wave = abs(fract((d1 - d2) * 16.0 - t * 0.03) - 0.5);
+        float env = abs(fract((d1 + d2) * 11.0) - 0.5);
+        etching = (exp(-pow(wave / 0.042, 2.0)) * 0.7 + exp(-pow(env / 0.040, 2.0)) * 0.4)
+                * (1.0 - smoothstep(0.18, 0.68, dr));
+    } else if (season == 2) {
+        // AUTUMN: Topographic wind-flow elevation isolines
+        float field = q.y * 1.4 - 0.35 * q.x
+                    + 0.08 * sin(q.x * 9.0 + q.y * 5.0 + t * 0.05)
+                    + 0.04 * cos(q.x * 17.0 - q.y * 11.0);
+        float iso = abs(fract(field * 16.0) - 0.5);
+        bool indexLine = mod(floor(field * 16.0), 4.0) < 0.5;
+        etching = exp(-pow(iso / (indexLine ? 0.055 : 0.032), 2.0)) * (indexLine ? 1.0 : 0.55);
+    } else {
+        // WINTER: 6-fold crystalline ice geometry & hexagonal contour lattice
+        float hexR = dr * (1.0 + 0.14 * cos(6.0 * da) + 0.05 * cos(12.0 * da));
+        float hexRings = abs(fract(hexR * 20.0) - 0.5);
+        float spokes = abs(sin(6.0 * da)) * dr;
+        float spokeLine = exp(-pow(spokes / 0.0022, 2.0));
+        etching = max(exp(-pow(hexRings / 0.045, 2.0)), spokeLine * 0.75)
+                * (1.0 - smoothstep(0.12, 0.58, dr));
+    }
+
+    add += mix(colSlate, colWarm, 0.25) * etching * cornerFade * 0.28;
+    return add;
+}
+
+void main() {
     vec2 uv = qt_TexCoord0;
-    vec2 p = (uv - vec2(0.5)) * vec2(aspectRatio, 1.0);
+    vec2 p = vec2((uv.x - 0.5) * ubuf.aspectRatio, 0.5 - uv.y);
+    float r = length(p);
+    float theta = atan(p.y, p.x);
 
-    // Soft clearance in front of the Moon and the telemetry column.
-    float centerClear = smoothstep(0.14, 0.42, length(p));
-    float effectWeight = clamp(intensity, 0.0, 1.0) * (0.25 + 0.75 * centerClear);
+    // Base deep-space radial gradient anchored to baseColor
+    vec3 bgEdge = ubuf.baseColor.rgb;
+    vec3 bgCenter = bgEdge + vec3(0.016, 0.024, 0.040) * (0.65 + 0.35 * ubuf.moonIllumination);
+    vec3 col = mix(bgCenter, bgEdge, smoothstep(0.0, 0.95, r));
 
-    vec3 col = baseColor.rgb;
+    int season = int(clamp(floor(ubuf.seasonIndex + 0.5), 0.0, 3.0));
+    int style = int(clamp(floor(ubuf.styleMode + 0.5), 0.0, 2.0));
 
-    float t      = max(time, 0.0);
-    float season = clamp(seasonIndex, 0.0, 3.0);
-    float moon   = clamp(moonIllumination, 0.0, 1.0);
-
-    float corner = smoothstep(0.22, 1.15, length(p));
-
-    if (season < 0.5) {
-        // -------------------------------------------------------------------
-        //  SPRING - cherry blossoms in a warm rose / violet haze.
-        // -------------------------------------------------------------------
-        vec3 rose   = vec3(0.98, 0.66, 0.76);
-        vec3 violet = vec3(0.60, 0.50, 0.88);
-        float warm = clamp(0.35 + 0.65 * (1.0 - uv.y) * (0.45 + 0.55 * uv.x),
-                           0.0, 1.0);
-        vec3 glow = mix(violet, rose, warm);
-        col = mix(col, glow, 0.13 * corner * effectWeight);
-
-        // Far -> near parallax layers.
-        vec4 b = blossomLayer(p, 13.0, 0.006, 0.008, 0.26, 8.7, 0.26, 0.52 * effectWeight, t);
-        col = col * (1.0 - b.a) + b.rgb;
-
-        b = blossomLayer(p, 8.5, 0.010, 0.012, 0.26, 4.3, 0.30, 0.66 * effectWeight, t);
-        col = col * (1.0 - b.a) + b.rgb;
-
-        b = blossomLayer(p, 5.5, 0.015, 0.018, 0.22, 1.9, 0.36, 0.88 * effectWeight, t);
-        col = col * (1.0 - b.a) + b.rgb;
-    } else if (season < 1.5) {
-        // -------------------------------------------------------------------
-        //  SUMMER - sparse nocturnal cirrus lit by the Moon.
-        // -------------------------------------------------------------------
-        float moonGain = 0.35 + 0.65 * moon;
-        vec3 moonlight = vec3(0.62, 0.76, 0.96);
-
-        vec2 cp1 = vec2(p.x * 1.6 + t * 0.012, p.y * 2.8);
-        float c1 = smoothstep(0.56, 0.86, fbm4(cp1));
-
-        // Second, slower deck: thinner streaks for the wisps the first layer
-        // misses, so the sky is never empty or top-heavy.
-        vec2 cp2 = vec2(p.x * 0.90 - t * 0.006, p.y * 5.0) + vec2(11.3, 5.7);
-        float c2 = smoothstep(0.56, 0.88, fbm4(cp2));
-
-        float clouds = max(c1, c2 * 0.85);
-        // Thin the cloud deck right behind the Moon.
-        clouds *= 0.30 + 0.70 * centerClear;
-
-        vec3 cloudCol = moonlight * (0.45 + 0.55 * moonGain);
-        col = mix(col, cloudCol, clouds * 0.30 * moonGain * effectWeight);
-
-        // Faint warm fireflies / low starlight in the lower third.
-        vec2 fp = p * 13.0;
-        fp.y += t * 0.22;
-        vec2 fc = floor(fp);
-        vec2 ff = fract(fp) - 0.5;
-        float fh = hash21(fc + 7.31);
-        if (fh > 0.83) {
-            vec2 fo = (hash22(fc + 1.77) - 0.5) * 0.62;
-            float fd = length(ff - fo);
-            float tw = 0.55 + 0.45 * sin(t * 2.1 + fh * 43.0);
-            float glint = 1.0 - smoothstep(0.0, 0.10, fd);
-            float lower = smoothstep(-0.02, 0.26, p.y)
-                        * (1.0 - smoothstep(0.33, 0.50, p.y));
-            float a = glint * tw * lower * 0.55 * effectWeight;
-            col += vec3(1.0, 0.84, 0.52) * a;
-        }
-
-        // A handful of cold sparkles for the rest of the sky.
-        vec2 sp2 = p * 27.0;
-        vec2 sc2 = floor(sp2);
-        vec2 sf2 = fract(sp2) - 0.5;
-        float sh = hash21(sc2 + 3.91);
-        if (sh > 0.94) {
-            vec2 so = (hash22(sc2 + 8.13) - 0.5) * 0.6;
-            float sd = length(sf2 - so);
-            float tw = 0.45 + 0.55 * sin(t * 1.3 + sh * 61.0);
-            float glint = 1.0 - smoothstep(0.0, 0.14, sd);
-            float a = glint * tw * 0.30 * (0.35 + 0.65 * centerClear) * effectWeight;
-            col += vec3(0.80, 0.88, 1.0) * a;
-        }
-    } else if (season < 2.5) {
-        // -------------------------------------------------------------------
-        //  AUTUMN - amber haze and falling leaves.
-        // -------------------------------------------------------------------
-        vec3 ochre = mix(vec3(0.90, 0.52, 0.18), vec3(0.70, 0.40, 0.16),
-                         clamp(uv.y, 0.0, 1.0));
-        col = mix(col, ochre, 0.11 * corner * effectWeight);
-
-        vec4 l = leafLayer(p, 12.0, 0.045, 0.014, 0.30, 6.1, 0.30, 0.70 * effectWeight, t);
-        col = col * (1.0 - l.a) + l.rgb;
-
-        l = leafLayer(p, 8.0, 0.070, 0.019, 0.28, 3.3, 0.34, 0.85 * effectWeight, t);
-        col = col * (1.0 - l.a) + l.rgb;
-
-        l = leafLayer(p, 5.0, 0.100, 0.025, 0.24, 1.2, 0.40, 1.00 * effectWeight, t);
-        col = col * (1.0 - l.a) + l.rgb;
+    vec3 motif = vec3(0.0);
+    if (style == 0) {
+        motif = evalPlanisphere(p, r, theta, season, ubuf.time);
+    } else if (style == 1) {
+        motif = evalAstrolabeEtching(p, r, theta, season, ubuf.time);
     } else {
-        // -------------------------------------------------------------------
-        //  WINTER - icy vignette, bokeh snow, crystal foreground.
-        // -------------------------------------------------------------------
-        vec3 ice = mix(vec3(0.42, 0.52, 0.85), vec3(0.55, 0.45, 0.80),
-                       clamp(uv.y, 0.0, 1.0));
-        col = mix(col, ice, 0.12 * corner * effectWeight);
-
-        vec4 s = snowLayer(p, 16.0, 0.040, 0.38, 0.0, 5.7, 0.14, 0.40 * effectWeight, t);
-        col = col * (1.0 - s.a) + s.rgb;
-
-        s = snowLayer(p, 10.0, 0.065, 0.34, 0.0, 2.9, 0.18, 0.55 * effectWeight, t);
-        col = col * (1.0 - s.a) + s.rgb;
-
-        s = snowLayer(p, 6.0, 0.095, 0.17, 1.0, 9.1, 0.24, 0.70 * effectWeight, t);
-        col = col * (1.0 - s.a) + s.rgb;
+        motif = evalPlanisphere(p, r, theta, season, ubuf.time) * 0.85
+              + evalAstrolabeEtching(p, r, theta, season, ubuf.time) * 0.75;
     }
 
-    fragColor = vec4(clamp(col, 0.0, 1.0), 1.0) * qt_Opacity;
+    // Scale by user intensity setting (0.65 default maps to 1.0x reference)
+    float weight = clamp(ubuf.intensity / 0.65, 0.0, 1.6);
+    col += motif * weight;
+
+    fragColor = vec4(col, 1.0) * ubuf.qt_Opacity;
 }

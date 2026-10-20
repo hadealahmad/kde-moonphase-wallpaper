@@ -3,7 +3,8 @@
 
     SPDX-License-Identifier: GPL-2.0-or-later
 
-    Bottom-right observer-centered day/night Earth globe.
+    Bottom-right observer-centered day/night Earth globe with NASA GEBCO
+    topography + bathymetry normal relief.
 */
 
 import QtQuick
@@ -63,6 +64,7 @@ Item {
 
         property variant daySource: dayImage
         property variant nightSource: nightImage
+        property variant normalSource: normalImage
 
         fragmentShader: Qt.resolvedUrl("../shaders/earth.frag.qsb")
     }
@@ -89,6 +91,17 @@ Item {
         sourceSize: Qt.size(2048, 1024)
     }
 
+    Image {
+        id: normalImage
+
+        source: Qt.resolvedUrl("../images/earth_normal.png")
+        visible: false
+        asynchronous: false
+        mipmap: true
+        smooth: true
+        sourceSize: Qt.size(2048, 1024)
+    }
+
     Text {
         id: caption
 
@@ -101,10 +114,10 @@ Item {
               + ", " + root.formatLongitude(root.observerLonDeg)
               + "  \u2022  SOLAR " + root.formatSolarTime(root.localSolarTimeHours)
 
-        color: Qt.rgba(0.78, 0.86, 1.0, 0.62)
+        color: Qt.rgba(0.86, 0.88, 0.92, 0.58)
         font.family: Kirigami.Theme.defaultFont.family
         font.pixelSize: root.captionSize
         font.weight: Font.Light
-        font.letterSpacing: 0.5
+        font.letterSpacing: 0.8
     }
 }

@@ -3,7 +3,7 @@
 
     SPDX-License-Identifier: GPL-2.0-or-later
 
-    Bottom-left heliocentric orbit & seasons widget.
+    Bottom-left flat top-down heliocentric orbit & seasons astrolabe widget.
 */
 
 import QtQuick
@@ -17,7 +17,7 @@ Item {
     property real earthHelioLonRad: 0.0
     property real jan1HelioLonRad: 1.754
     property real yearProgress: 0.0
-    property real orbitTiltRad: 0.95
+    property real orbitTiltRad: 0.0
     property real axialTiltRad: 0.4091
     property bool showGhostEarths: true
 
@@ -25,27 +25,22 @@ Item {
     property int dayOfYear: 1
     property int daysInYear: 365
 
-    // --- Geometry -----------------------------------------------------------
-    readonly property real orbitRadiusX: width * 0.36
-    readonly property real orbitRadiusY: width * 0.36 * Math.cos(root.orbitTiltRad)
-    readonly property real labelSize: Math.max(7, Math.round(width * 0.042))
+    // --- Geometry (flat circular top-down projection) -----------------------
+    readonly property real orbitRadius: width * 0.36
+    readonly property real labelSize: Math.max(7, Math.round(width * 0.039))
     readonly property real captionSize: Math.max(7, Math.round(width * 0.040))
 
     implicitWidth: 230
     implicitHeight: width + caption.height + Math.round(width * 0.02)
 
     function pointAt(theta) {
-        return Qt.point(root.width * 0.5 + root.orbitRadiusX * Math.cos(theta),
-                        root.width * 0.5 - root.orbitRadiusY * Math.sin(theta));
+        return Qt.point(root.width * 0.5 + root.orbitRadius * Math.cos(theta),
+                        root.width * 0.5 - root.orbitRadius * Math.sin(theta));
     }
 
-    // Labels are pushed slightly away from the orbit line: the cardinal
-    // season names sit outside the ring, the Jan 1 marker sits inside it.
-    // This keeps DEC and JAN 1 (only ~10 degrees apart) from overlapping and
-    // leaves the active Earth visible on the ring.
     function labelPointAt(theta, factor) {
-        return Qt.point(root.width * 0.5 + root.orbitRadiusX * factor * Math.cos(theta),
-                        root.width * 0.5 - root.orbitRadiusY * factor * Math.sin(theta));
+        return Qt.point(root.width * 0.5 + root.orbitRadius * factor * Math.cos(theta),
+                        root.width * 0.5 - root.orbitRadius * factor * Math.sin(theta));
     }
 
     ShaderEffect {
@@ -67,14 +62,13 @@ Item {
         fragmentShader: Qt.resolvedUrl("../shaders/orbit.frag.qsb")
     }
 
-    // Season labels at the four cardinal orbital points.
+    // Season labels at all four cardinal orbital points around the flat ring.
     Repeater {
         model: [
-            { "label": "MAR", "angle": 0.0, "factor": 1.26 },
-            { "label": "JUN", "angle": Math.PI * 0.5, "factor": 1.40 },
-            { "label": "SEP", "angle": Math.PI, "factor": 1.26 }
-            // DEC is intentionally unlabelled: the JAN 1 marker sits next to
-            // it and the two labels would collide at 230 px.
+            { "label": "MAR", "angle": 0.0,           "factor": 1.24 },
+            { "label": "JUN", "angle": Math.PI * 0.5, "factor": 1.24 },
+            { "label": "SEP", "angle": Math.PI,       "factor": 1.24 },
+            { "label": "DEC", "angle": Math.PI * 1.5, "factor": 1.24 }
         ]
 
         delegate: Text {
@@ -86,26 +80,27 @@ Item {
             y: labelPoint.y - height * 0.5
 
             text: modelData.label
-            color: Qt.rgba(0.72, 0.82, 1.0, 0.45)
+            color: Qt.rgba(0.86, 0.88, 0.92, 0.48)
             font.family: Kirigami.Theme.defaultFont.family
             font.pixelSize: root.labelSize
-            font.letterSpacing: 0.6
+            font.letterSpacing: 0.8
         }
     }
 
-    // Jan 1 start/end marker label, placed on the orbit itself.
+    // Jan 1 start/end marker label, placed inside the orbit ring so it never
+    // collides with the outer DEC label.
     Text {
         id: jan1Label
 
-        readonly property point anchorPoint: root.labelPointAt(root.jan1HelioLonRad, 0.60)
+        readonly property point anchorPoint: root.labelPointAt(root.jan1HelioLonRad, 0.68)
 
         x: anchorPoint.x - width * 0.5
         y: anchorPoint.y - height * 0.5
 
         text: "JAN 1"
-        color: Qt.rgba(1.0, 0.84, 0.52, 0.85)
+        color: Qt.rgba(0.95, 0.89, 0.74, 0.72)
         font.family: Kirigami.Theme.defaultFont.family
-        font.pixelSize: root.labelSize
+        font.pixelSize: Math.max(7, root.labelSize - 1)
         font.letterSpacing: 0.6
     }
 
@@ -119,12 +114,12 @@ Item {
 
         text: root.seasonName.toUpperCase()
               + "  \u2022  DAY " + root.dayOfYear + " / " + root.daysInYear
-              + "  \u2022  " + (root.yearProgress * 100).toFixed(1) + "% OF YEAR"
+              + "  \u2022  " + (root.yearProgress * 100).toFixed(1) + "%"
 
-        color: Qt.rgba(0.78, 0.86, 1.0, 0.62)
+        color: Qt.rgba(0.86, 0.88, 0.92, 0.58)
         font.family: Kirigami.Theme.defaultFont.family
         font.pixelSize: root.captionSize
         font.weight: Font.Light
-        font.letterSpacing: 0.5
+        font.letterSpacing: 0.8
     }
 }

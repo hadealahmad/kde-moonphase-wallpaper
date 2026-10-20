@@ -115,6 +115,12 @@
       <min>0</min>
       <max>5</max>
     </entry>
+    <entry name="SeasonalBackgroundStyle" type="Int">
+      <label>Seasonal background visual style (0 = Celestial Planisphere, 1 = Astrolabe &amp; Seasonal Etchings, 2 = Combined)</label>
+      <default>0</default>
+      <min>0</min>
+      <max>2</max>
+    </entry>
     <entry name="SeasonalBackgroundAnimate" type="Bool">
       <label>Animate the seasonal background texture</label>
       <default>true</default>

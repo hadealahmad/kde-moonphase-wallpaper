@@ -3,8 +3,9 @@
 
     SPDX-License-Identifier: GPL-2.0-or-later
 
-    Low-GPU seasonal background layer with half-resolution FBO caching
-    and throttled timer animation.
+    Low-GPU seasonal background layer with FBO caching and throttled timer
+    animation. Supports Concept 1 (Celestial Planisphere), Concept 3
+    (Astrolabe & Seasonal Etchings), or Combined mode.
 */
 
 import QtQuick
@@ -15,20 +16,22 @@ Item {
     // --- Public contract ----------------------------------------------------
     // seasonIndex: -1 = Off (solid colour only), 0 = Spring, 1 = Summer,
     //              2 = Autumn, 3 = Winter.
+    // styleMode:   0 = Celestial Planisphere & Star Chart (Concept 1)
+    //              1 = Astrolabe & Seasonal Etchings (Concept 3)
+    //              2 = Combined (Planisphere + Etchings)
     property color baseColor: "#05070d"
     property int seasonIndex: 3
+    property int styleMode: 0
     property bool animate: true
     property real intensity: 0.65
     property int fps: 20
     property real moonIllumination: 0.5
-    property real resolutionScale: 0.5
+    property real resolutionScale: 1.0
     property real time: 0.0
 
     readonly property bool shaderActive: root.seasonIndex >= 0 && root.intensity > 0.001
 
     // --- Solid fallback -----------------------------------------------------
-    // Shown when the shader is off (or unavailable); also the colour the
-    // shader blends towards at low intensity.
     Rectangle {
         anchors.fill: parent
         color: root.baseColor
@@ -36,9 +39,6 @@ Item {
     }
 
     // --- Seasonal shader ----------------------------------------------------
-    // Rendered into a half-resolution offscreen texture and upscaled smoothly.
-    // On a 2560x1440 panel that is ~1.8 MP of fragment work instead of ~3.7 MP,
-    // and the layer is cached so a static scene costs no GPU time at all.
     ShaderEffect {
         id: backgroundShader
 
@@ -48,7 +48,7 @@ Item {
         layer.enabled: root.shaderActive
         layer.smooth: true
         layer.textureSize: Qt.size(Math.max(1, Math.round(root.width * root.resolutionScale)),
-                                  Math.max(1, Math.round(root.height * root.resolutionScale)))
+                                   Math.max(1, Math.round(root.height * root.resolutionScale)))
 
         // Uniform names must match the UBO in contents/shaders/background.frag.
         property color baseColor: root.baseColor
@@ -57,14 +57,12 @@ Item {
         property real aspectRatio: root.height > 0 ? root.width / root.height : 1.7778
         property real intensity: root.intensity
         property real moonIllumination: root.moonIllumination
+        property real styleMode: root.styleMode
 
         fragmentShader: Qt.resolvedUrl("../shaders/background.frag.qsb")
     }
 
     // --- Throttled animation ------------------------------------------------
-    // Deliberately a Timer rather than a frame-driven animation: the clock
-    // advances at `fps` (clamped to 5..30) and only while the widget is
-    // actually on screen and the application is active.
     Timer {
         id: animTimer
 

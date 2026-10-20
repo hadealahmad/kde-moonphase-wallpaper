@@ -55,6 +55,9 @@ WallpaperItem {
     readonly property int seasonalBackgroundMode:
         (root.configuration.SeasonalBackgroundMode !== undefined)
             ? Number(root.configuration.SeasonalBackgroundMode) : 0
+    readonly property int seasonalBackgroundStyle:
+        (root.configuration.SeasonalBackgroundStyle !== undefined)
+            ? Number(root.configuration.SeasonalBackgroundStyle) : 0
     readonly property bool seasonalBackgroundAnimate:
         (root.configuration.SeasonalBackgroundAnimate !== undefined)
             ? Boolean(root.configuration.SeasonalBackgroundAnimate) : true
@@ -126,8 +129,8 @@ WallpaperItem {
         return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
     }
     readonly property color telemetryColor: root.backgroundLuminance > 0.5
-                                            ? Qt.rgba(0.0, 0.0, 0.0, 0.55)
-                                            : Qt.rgba(1.0, 1.0, 1.0, 0.55)
+                                            ? Qt.rgba(0.0, 0.0, 0.0, 0.58)
+                                            : Qt.rgba(0.86, 0.88, 0.92, 0.58)
 
     function syntheticDate(dayOfYear, utcHour) {
         const year = new Date().getUTCFullYear();
@@ -193,6 +196,7 @@ WallpaperItem {
         anchors.fill: parent
         baseColor: root.backgroundColor
         seasonIndex: root.activeSeasonIndex
+        styleMode: root.seasonalBackgroundStyle
         animate: root.seasonalBackgroundAnimate
         intensity: root.seasonalBackgroundIntensity
         fps: root.seasonalBackgroundFps
