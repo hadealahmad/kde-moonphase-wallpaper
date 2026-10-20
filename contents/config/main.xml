@@ -65,6 +65,22 @@
       <label>Show the bottom-right Earth globe widget</label>
       <default>true</default>
     </entry>
+    <entry name="ShowPrayerClockWidget" type="Bool">
+      <label>Show top-right analogue prayer times clock widget</label>
+      <default>true</default>
+    </entry>
+    <entry name="PrayerCalculationMethod" type="Int">
+      <label>Prayer calculation method (3=MWL, 2=ISNA, 4=Umm al-Qura, 5=Egyptian, 13=Diyanet, 1=Karachi, 7=Tehran)</label>
+      <default>3</default>
+    </entry>
+    <entry name="PrayerAsrSchool" type="Int">
+      <label>Asr juristic school (0=Standard/Shafi, 1=Hanafi)</label>
+      <default>0</default>
+    </entry>
+    <entry name="PrayerUseApi" type="Bool">
+      <label>Fetch daily prayer times from AlAdhan API with offline fallback</label>
+      <default>true</default>
+    </entry>
     <entry name="CornerWidgetSize" type="Int">
       <label>Corner widget size in pixels</label>
       <default>230</default>

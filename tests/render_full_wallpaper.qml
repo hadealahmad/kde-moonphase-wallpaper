@@ -16,6 +16,7 @@ import QtQuick.Window
 import "../contents/ui"
 import "../contents/ui" as UI
 import "../contents/code/astronomy.js" as Astronomy
+import "../contents/code/prayer.js" as Prayer
 
 Window {
     id: window
@@ -30,6 +31,10 @@ Window {
     readonly property string backgroundColor: "#05070d"
     readonly property real observerLat: 30.0
     readonly property real observerLon: 31.2
+
+    // Corner widget geometry, shared by the orbit/earth/prayer widgets.
+    readonly property int cornerSize: 230
+    readonly property int cornerMargin: 36
 
     readonly property var checkpoints: [
         {
@@ -68,6 +73,23 @@ Window {
         window.orbitState = Astronomy.getEarthAndOrbitState(checkpoint.date,
                                                             window.observerLat,
                                                             window.observerLon);
+
+        const prayerState = Prayer.getPrayerState(checkpoint.date,
+                                                  window.observerLat,
+                                                  window.observerLon,
+                                                  3, 0);
+        prayerClockWidget.localTimeHours = prayerState.localTimeHours;
+        prayerClockWidget.fajrHours = prayerState.fajrHours;
+        prayerClockWidget.sunriseHours = prayerState.sunriseHours;
+        prayerClockWidget.dhuhrHours = prayerState.dhuhrHours;
+        prayerClockWidget.asrHours = prayerState.asrHours;
+        prayerClockWidget.maghribHours = prayerState.maghribHours;
+        prayerClockWidget.ishaHours = prayerState.ishaHours;
+        prayerClockWidget.nextPrayerHours = prayerState.nextPrayerHours;
+        prayerClockWidget.nextPrayerIndex = prayerState.nextPrayerIndex;
+        prayerClockWidget.nextPrayerName = prayerState.nextPrayerName;
+        prayerClockWidget.minutesToNextPrayer = prayerState.minutesToNextPrayer;
+        prayerClockWidget.methodName = prayerState.methodName;
     }
 
     function renderNext() {
@@ -202,6 +224,18 @@ Window {
             localSolarTimeHours: window.orbitState ? window.orbitState.localSolarTimeHours : 12.0
             nightLightsBoost: 3.2
             showObserverPin: true
+        }
+
+        // --- Prayer clock (top-right) --------------------------------------
+        PrayerClockWidget {
+            id: prayerClockWidget
+
+            width: window.cornerSize
+            height: implicitHeight
+
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: window.cornerMargin
         }
 
         Text {

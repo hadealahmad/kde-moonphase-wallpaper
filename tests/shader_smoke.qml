@@ -17,8 +17,9 @@
 // The 2x2 grid is: full moon, first quarter, waxing crescent (earthshine),
 // full moon with libration (+lon, +lat) and roll +0.4 rad.
 // The 512x128 strip underneath loads background.frag.qsb twice (Planisphere
-// and Astrolabe Etching styles), and the last row renders OrbitWidget +
-// EarthWidget, so a single run loads all four compiled shaders.
+// and Astrolabe Etching styles), the next row renders OrbitWidget +
+// EarthWidget, and the final row renders PrayerClockWidget twice (AM and PM
+// active rings), so a single run loads every compiled shader.
 
 import QtQuick
 import QtQuick.Window
@@ -28,10 +29,10 @@ import "../contents/ui" as UI
 Window {
     id: win
     width: 512
-    height: 880
+    height: 1120
     visible: true
     color: "#0b0d12"
-    title: "moon/background/orbit/earth shader smoke test"
+    title: "moon/background/orbit/earth/prayer shader smoke test"
 
     // ------------------------------------------------------------------
     //  Procedural albedo: 2:1, north up, prime meridian (u = 0.5) marked
@@ -225,6 +226,35 @@ Window {
             localSolarTimeHours: 12.0
             nightLightsBoost: 3.2
             showObserverPin: true
+        }
+
+        // --- prayer_clock.frag.qsb --------------------------------------
+        // Two instances exercise both active-ring halves of the dual dial:
+        // morning (AM inner ring lit) and afternoon (PM outer ring lit).
+        UI.PrayerClockWidget {
+            x: 40
+            y: 890
+            width: 200
+            height: implicitHeight
+
+            localTimeHours: 8.5
+            nextPrayerIndex: 2
+            nextPrayerName: "Dhuhr"
+            nextPrayerHours: 11.9
+            minutesToNextPrayer: 204
+        }
+
+        UI.PrayerClockWidget {
+            x: 272
+            y: 890
+            width: 200
+            height: implicitHeight
+
+            localTimeHours: 16.2
+            nextPrayerIndex: 4
+            nextPrayerName: "Maghrib"
+            nextPrayerHours: 17.7
+            minutesToNextPrayer: 90
         }
     }
 

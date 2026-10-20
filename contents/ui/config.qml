@@ -43,6 +43,13 @@ Kirigami.FormLayout {
     property alias cfg_SeasonalBackgroundIntensity: seasonalIntensitySlider.value
     property alias cfg_SeasonalBackgroundFps: seasonalFpsSpin.value
 
+    // Prayer clock: explicit properties because the combo boxes map their
+    // labels to AlAdhan method ids instead of raw indices.
+    property bool cfg_ShowPrayerClockWidget: true
+    property int cfg_PrayerCalculationMethod: 3
+    property int cfg_PrayerAsrSchool: 0
+    property bool cfg_PrayerUseApi: true
+
     readonly property bool debugEnabled: debugCheck.checked
 
     // DebugPhaseValue is a normalized phase: 0 = new, 0.5 = full, 1 = new.
@@ -407,6 +414,83 @@ Kirigami.FormLayout {
         Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Earth widget:")
         text: i18nd("plasma_wallpaper_org.kde.moonphase", "Show bottom-right Earth globe")
         Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Show Earth globe widget")
+    }
+
+    QQC2.CheckBox {
+        id: prayerClockCheck
+
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Prayer clock:")
+        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Show top-right prayer times clock")
+        checked: root.cfg_ShowPrayerClockWidget
+        onCheckedChanged: root.cfg_ShowPrayerClockWidget = checked
+        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Show prayer times clock widget")
+        Accessible.description: i18nd("plasma_wallpaper_org.kde.moonphase",
+                                      "Draw the analogue prayer times clock in the top-right corner.")
+    }
+
+    QQC2.ComboBox {
+        id: prayerMethodCombo
+
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Prayer calculation method:")
+        enabled: root.cfg_ShowPrayerClockWidget
+
+        // valueRole carries the AlAdhan method id, so the stored value never
+        // depends on the order of the entries below.
+        model: [
+            { label: i18nd("plasma_wallpaper_org.kde.moonphase", "Muslim World League (MWL)"), methodId: 3 },
+            { label: i18nd("plasma_wallpaper_org.kde.moonphase", "ISNA (North America)"), methodId: 2 },
+            { label: i18nd("plasma_wallpaper_org.kde.moonphase", "Umm al-Qura (Makkah)"), methodId: 4 },
+            { label: i18nd("plasma_wallpaper_org.kde.moonphase", "Egyptian General Authority"), methodId: 5 },
+            { label: i18nd("plasma_wallpaper_org.kde.moonphase", "Diyanet (Turkey)"), methodId: 13 },
+            { label: i18nd("plasma_wallpaper_org.kde.moonphase", "University of Islamic Sciences, Karachi"), methodId: 1 },
+            { label: i18nd("plasma_wallpaper_org.kde.moonphase", "University of Tehran"), methodId: 7 }
+        ]
+        textRole: "label"
+        valueRole: "methodId"
+
+        currentIndex: {
+            const index = prayerMethodCombo.indexOfValue(root.cfg_PrayerCalculationMethod);
+            return index >= 0 ? index : 0;
+        }
+        onActivated: root.cfg_PrayerCalculationMethod = prayerMethodCombo.currentValue
+
+        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Prayer calculation method")
+        Accessible.description: i18nd("plasma_wallpaper_org.kde.moonphase",
+                                      "Fajr and Isha twilight angles used for the daily prayer times.")
+    }
+
+    QQC2.ComboBox {
+        id: prayerAsrCombo
+
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Asr juristic method:")
+        enabled: root.cfg_ShowPrayerClockWidget
+
+        // Index order must match the PrayerAsrSchool config entry:
+        // 0 = Standard, 1 = Hanafi.
+        model: [
+            i18nd("plasma_wallpaper_org.kde.moonphase", "Standard (Shafi'i, Maliki, Hanbali)"),
+            i18nd("plasma_wallpaper_org.kde.moonphase", "Hanafi")
+        ]
+
+        currentIndex: root.cfg_PrayerAsrSchool
+        onActivated: root.cfg_PrayerAsrSchool = prayerAsrCombo.currentIndex
+
+        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Asr juristic method")
+        Accessible.description: i18nd("plasma_wallpaper_org.kde.moonphase",
+                                      "Shadow length used for the Asr prayer time.")
+    }
+
+    QQC2.CheckBox {
+        id: prayerApiCheck
+
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Prayer timings:")
+        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Fetch live timings from AlAdhan API (with offline fallback)")
+        enabled: root.cfg_ShowPrayerClockWidget
+        checked: root.cfg_PrayerUseApi
+        onCheckedChanged: root.cfg_PrayerUseApi = checked
+        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Fetch prayer times from AlAdhan")
+        Accessible.description: i18nd("plasma_wallpaper_org.kde.moonphase",
+                                      "Use the AlAdhan API for the daily timings and fall back to the built-in calculation when the network is unavailable.")
     }
 
     RowLayout {

@@ -10,6 +10,7 @@ import org.kde.kirigami as Kirigami
 import org.kde.plasma.plasmoid
 
 import "../code/astronomy.js" as Astronomy
+import "../code/prayer.js" as Prayer
 
 WallpaperItem {
     id: root
@@ -51,6 +52,23 @@ WallpaperItem {
     readonly property color backgroundColor: root.configuration
                                            ? root.configuration.BackgroundColor
                                            : "#05070d"
+
+    readonly property bool showPrayerClockWidget:
+        (root.configuration.ShowPrayerClockWidget !== undefined)
+            ? Boolean(root.configuration.ShowPrayerClockWidget) : true
+    readonly property int prayerCalculationMethod:
+        (root.configuration.PrayerCalculationMethod !== undefined)
+            ? Number(root.configuration.PrayerCalculationMethod) : 3
+    readonly property int prayerAsrSchool:
+        (root.configuration.PrayerAsrSchool !== undefined)
+            ? Number(root.configuration.PrayerAsrSchool) : 0
+    readonly property bool prayerUseApi:
+        (root.configuration.PrayerUseApi !== undefined)
+            ? Boolean(root.configuration.PrayerUseApi) : true
+
+    // The debug preview freezes the simulated date, so live prayer timings
+    // and the ticking clock must be suspended while it is active.
+    readonly property bool useDemoDate: root.debugActive
 
     readonly property int seasonalBackgroundMode:
         (root.configuration.SeasonalBackgroundMode !== undefined)
@@ -101,6 +119,16 @@ WallpaperItem {
     onObserverLatChanged: root.updateAstronomy()
     onObserverLonChanged: root.updateAstronomy()
 
+    // Recompute the prayer snapshot as soon as any related setting changes.
+    Connections {
+        target: root.configuration
+
+        function onShowPrayerClockWidgetChanged() { root.updateAstronomy(); }
+        function onPrayerCalculationMethodChanged() { root.updateAstronomy(); }
+        function onPrayerAsrSchoolChanged() { root.updateAstronomy(); }
+        function onPrayerUseApiChanged() { root.updateAstronomy(); }
+    }
+
     // Synodic month, used only to nudge the ephemeris towards a manually
     // selected phase while the settings preview is active.
     readonly property real lunarCycleMs: 29.530588853 * 24 * 60 * 60 * 1000
@@ -122,6 +150,21 @@ WallpaperItem {
 
     property var orbitState: null
 
+    // Prayer clock snapshot, refreshed by updateAstronomy() and by the
+    // 30-second clock timer below.
+    property real prayerLocalTimeHours: 12.0
+    property real fajrHours: 4.8
+    property real sunriseHours: 6.1
+    property real dhuhrHours: 11.9
+    property real asrHours: 15.3
+    property real maghribHours: 17.7
+    property real ishaHours: 19.0
+    property real nextPrayerHours: 15.3
+    property int nextPrayerIndex: 3
+    property string nextPrayerName: "Asr"
+    property int minutesToNextPrayer: 168
+    property string prayerMethodName: "MWL"
+
     // Luminance of the configured background, used to keep the telemetry
     // readable on both very dark and very light wallpapers.
     readonly property real backgroundLuminance: {
@@ -140,23 +183,88 @@ WallpaperItem {
         return new Date(start + (day - 1.0) * 86400000 + hour * 3600000);
     }
 
+    // Copy a prayer.js state object onto the root properties consumed by
+    // PrayerClockWidget. Missing or malformed states leave the last snapshot.
+    function applyPrayerState(pState) {
+        if (!pState) {
+            return;
+        }
+
+        root.prayerLocalTimeHours = pState.localTimeHours;
+        root.fajrHours = pState.fajrHours;
+        root.sunriseHours = pState.sunriseHours;
+        root.dhuhrHours = pState.dhuhrHours;
+        root.asrHours = pState.asrHours;
+        root.maghribHours = pState.maghribHours;
+        root.ishaHours = pState.ishaHours;
+        root.nextPrayerHours = pState.nextPrayerHours;
+        root.nextPrayerIndex = pState.nextPrayerIndex;
+        root.nextPrayerName = pState.nextPrayerName;
+        root.minutesToNextPrayer = pState.minutesToNextPrayer;
+        root.prayerMethodName = pState.methodName;
+    }
+
+    function prayerStateFor(date) {
+        try {
+            return Prayer.getPrayerState(date, root.observerLat, root.observerLon,
+                                         root.prayerCalculationMethod,
+                                         root.prayerAsrSchool);
+        } catch (e) {
+            console.warn("moonphase: prayer times failed:", e);
+            return null;
+        }
+    }
+
+    // Offline recalculation only; the daily AlAdhan fetch happens once per
+    // updateAstronomy() call and is then served from prayer.js' cache.
+    function refreshPrayerState() {
+        let date = new Date();
+        if (root.debugActive) {
+            date = root.syntheticDate(root.debugDay, root.debugHour);
+        }
+        root.applyPrayerState(root.prayerStateFor(date));
+    }
+
     function updateAstronomy() {
         try {
             const lat = root.observerLat;
             const lon = root.observerLon;
+
+            // Read the demo switch straight from the configuration: a derived
+            // binding can still be stale while the wallpaper is being
+            // constructed, and a fetch made in that window would cache live
+            // timings for the simulated date.
+            const demoMode = root.configuration
+                             && root.configuration.DebugTimeOverrideEnabled === true;
             let date = new Date();
 
-            if (root.debugActive) {
+            if (demoMode) {
                 date = root.syntheticDate(root.debugDay, root.debugHour);
             }
 
-            if (root.debugActive) {
+            if (demoMode) {
                 root.moonState = root.stateForPhase(root.debugPhase, date.getTime(), lat, lon);
             } else {
                 root.moonState = Astronomy.getMoonState(date, lat, lon);
             }
 
             root.orbitState = Astronomy.getEarthAndOrbitState(date, lat, lon);
+
+            // Synchronous offline snapshot first, so the dial is correct
+            // immediately; the API result replaces it when it arrives.
+            root.applyPrayerState(root.prayerStateFor(date));
+
+            if (!demoMode && root.prayerUseApi && root.showPrayerClockWidget) {
+                Prayer.fetchPrayerTimesAsync(date, lat, lon,
+                                             root.prayerCalculationMethod,
+                                             root.prayerAsrSchool,
+                                             function(apiState) {
+                    // A response can land after the preview was switched on.
+                    if (!root.debugActive) {
+                        root.applyPrayerState(apiState);
+                    }
+                });
+            }
         } catch (e) {
             // Keep the last known-good scene rather than blanking the desktop.
             console.warn("moonphase: ephemeris failed:", e);
@@ -344,6 +452,31 @@ WallpaperItem {
         showObserverPin: root.showObserverPin
     }
 
+    PrayerClockWidget {
+        id: prayerClockWidget
+
+        visible: root.showPrayerClockWidget
+        width: root.cornerSize
+        height: implicitHeight
+
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: root.cornerMargin
+
+        localTimeHours: root.prayerLocalTimeHours
+        fajrHours: root.fajrHours
+        sunriseHours: root.sunriseHours
+        dhuhrHours: root.dhuhrHours
+        asrHours: root.asrHours
+        maghribHours: root.maghribHours
+        ishaHours: root.ishaHours
+        nextPrayerHours: root.nextPrayerHours
+        nextPrayerIndex: root.nextPrayerIndex
+        nextPrayerName: root.nextPrayerName
+        minutesToNextPrayer: root.minutesToNextPrayer
+        methodName: root.prayerMethodName
+    }
+
     Timer {
         id: refreshTimer
 
@@ -353,6 +486,18 @@ WallpaperItem {
         triggeredOnStart: true
 
         onTriggered: root.updateAstronomy()
+    }
+
+    // Fast clock tick: keeps the analogue hands and the countdown in step
+    // without re-running the ephemeris or hitting the network.
+    Timer {
+        id: prayerClockTimer
+
+        interval: 30000
+        running: root.showPrayerClockWidget && !root.useDemoDate
+        repeat: true
+
+        onTriggered: root.refreshPrayerState()
     }
 
     Component.onCompleted: root.updateAstronomy()
