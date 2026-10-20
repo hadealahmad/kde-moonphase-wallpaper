@@ -36,13 +36,25 @@ float sdSegment(vec2 p, vec2 a, vec2 b) {
     return length(pa - ba * h);
 }
 
-float drawEdge(vec2 p, vec2 a, vec2 b) {
+// Remaps legacy constellation coordinates to compact, vertically centered
+// left/right wings (around y = 0.0, x = +/-0.52) well clear of corner widgets.
+vec2 mapConstellationPt(vec2 v) {
+    const float scale = 0.54;
+    if (v.x < 0.0) {
+        return vec2(-0.52, 0.0) + (v - vec2(-0.55, 0.22)) * scale;
+    }
+    return vec2(0.52, 0.0) + (v - vec2(0.57, 0.21)) * scale;
+}
+
+float drawEdge(vec2 p, vec2 aRaw, vec2 bRaw) {
+    vec2 a = mapConstellationPt(aRaw);
+    vec2 b = mapConstellationPt(bRaw);
     float d = sdSegment(p, a, b);
-    float line = exp(-pow(d / 0.0014, 2.0)) * 0.26;
-    float nodeA = exp(-pow(length(p - a) / 0.0055, 2.0)) * 0.90;
-    float nodeB = exp(-pow(length(p - b) / 0.0055, 2.0)) * 0.90;
-    float ringA = exp(-pow((length(p - a) - 0.011) / 0.0014, 2.0)) * 0.35;
-    float ringB = exp(-pow((length(p - b) - 0.011) / 0.0014, 2.0)) * 0.35;
+    float line = exp(-pow(d / 0.0011, 2.0)) * 0.28;
+    float nodeA = exp(-pow(length(p - a) / 0.0038, 2.0)) * 0.90;
+    float nodeB = exp(-pow(length(p - b) / 0.0038, 2.0)) * 0.90;
+    float ringA = exp(-pow((length(p - a) - 0.0076) / 0.0011, 2.0)) * 0.36;
+    float ringB = exp(-pow((length(p - b) - 0.0076) / 0.0011, 2.0)) * 0.36;
     return max(line, max(max(nodeA, nodeB), max(ringA, ringB)));
 }
 
@@ -117,7 +129,7 @@ vec3 evalPlanisphere(vec2 p, float r, float theta, int season, float t) {
     vec3 starCol = mix(colSilver, colWarm, 0.35) * (s1 * 0.65 + s2 * 0.42 + s3 * 0.25);
     add += starCol * moonKeepout;
 
-    // Seasonal Constellations (left & right celestial wings)
+    // Seasonal Constellations (compact & vertically centered on left/right wings)
     float cMask = 0.0;
     if (season == 0) {
         // SPRING: Leo (left) & Virgo (right)
@@ -194,7 +206,7 @@ vec3 evalAstrolabeEtching(vec2 p, float r, float theta, int season, float t) {
     float ang = idx * stepA;
     float dAng = abs(atan(sin(theta - ang), cos(theta - ang))) * r;
     bool major = mod(idx, 10.0) < 0.5;
-    float inBand = smoothstep(0.258, 0.261, r) * (1.0 - smoothstep(major ? 0.276 : 0.270, major ? 0.278 : 0.272, r));
+    float inBand = smoothstep(0.258, 0.261, r) * (1.0 - smoothstep(major ? 0.276 : 0.270, major ? 0.276 : 0.272, r));
     float tick = inBand * exp(-pow(dAng / 0.0010, 2.0)) * (major ? 0.45 : 0.20);
     add += mix(colSilver, colWarm, major ? 0.5 : 0.0) * tick;
 
@@ -205,12 +217,13 @@ vec3 evalAstrolabeEtching(vec2 p, float r, float theta, int season, float t) {
                    * (1.0 - smoothstep(0.36, 0.42, r)) * 0.25;
     add += colWarm * cardLine;
 
-    // Seasonal Engraved Corner Etchings (keep center & bottom widgets clear)
+    // Seasonal Engraved Corner Etchings (keep center & all 3 corner widgets clear)
     float centerClear = smoothstep(0.38, 0.54, r);
-    float bottomCornerClear = smoothstep(0.18, 0.34, length(p - vec2(-0.72, -0.34)))
-                            * smoothstep(0.18, 0.34, length(p - vec2( 0.72, -0.34)));
+    float widgetCornerClear = smoothstep(0.18, 0.34, length(p - vec2(-0.72, -0.34)))
+                            * smoothstep(0.18, 0.34, length(p - vec2( 0.72, -0.34)))
+                            * smoothstep(0.18, 0.34, length(p - vec2( 0.72,  0.34)));
     float cornerFade = smoothstep(0.32, 0.85, length(p * vec2(0.85, 1.15)))
-                     * centerClear * bottomCornerClear;
+                     * centerClear * widgetCornerClear;
 
     vec2 q = vec2(abs(p.x), p.y);
     vec2 focal = vec2(0.76, 0.36);
