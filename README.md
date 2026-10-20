@@ -2,36 +2,58 @@
 
 A live, physically based astronomical desktop wallpaper for **KDE Plasma 6** (`org.kde.plasma.moonphase`). It combines a real-time Jean Meeus lunar and solar ephemeris engine with five custom GLSL 440 fragment shaders and NASA elevation/bathymetry datasets to turn the desktop into a cohesive celestial observatory.
 
+![Moon Phase & Celestial Astrolabe Wallpaper — 2K Full Overview](docs/screenshots/hero_combined_2k.png)
+
 ---
 
 ## 1. Visual Components & Features
 
 ### Center: Physically Based 3D Moon (`main.qml` + `moon.frag`)
+
+![Center 3D Moon with Sharp Ticked Bezel & Curved Telemetry](docs/screenshots/closeup_moon.png)
+
 - **Jean Meeus Ephemeris (Ch. 47/48):** True lunar phase angle, illuminated fraction, synodic age, selenocentric sun direction, and **optical libration** in longitude and latitude (the Moon visibly wobbles across the month).
 - **LRO Elevation & Normal Mapping:** Uses `2048×1024` equirectangular lunar maps (`moon_albedo.jpg` and `moon_normal.png`) derived from NASA's Lunar Reconnaissance Orbiter (LRO) CGI Moon Kit (`ldem_4.tif` + `lroc_color_poles_2k.tif`).
 - **Hapke / Lommel-Seeliger + Lambert Regolith BRDF:** Soft solar terminator with realistic limb brightening, micro-shadowing across crater rims, and configurable **Earthshine** illuminating the night hemisphere.
 - **Invariant Centering & Curved Telemetry Arc (`CurvedText.qml`):** The lunar disc is locked to `anchors.centerIn: parent` so toggling captions never shifts the Moon. Its curved telemetry caption (`WANING GIBBOUS • 61.9% • DAY 9.0`) follows a circular bottom arc outside the `r = 0.265` ticked astrolabe bezel with an automatic radial-spoke keepout zone.
 
+---
+
 ### Full-Screen Backdrop: Switchable Celestial Planisphere & Engraved Seasonal Etchings (`BackgroundWidget.qml` + `background.frag`)
+
 - **Razor-Sharp Screen-Space Anti-Aliased Geometry:** Uses `fwidth(r)` screen-space derivatives (`crispStroke`) for 1-pixel anti-aliased concentric coordinate rings, 72/120-tick lunar bezel graduation marks, and constellation lines with zero Gaussian blur.
 - **Mid-Vertical Constellation Placement:** Seasonal zodiac and major constellations (Orion, Cygnus, Cassiopeia, Leo) are scaled and positioned in the vertical mid-band (`y ∈ [0.36, 0.64]`) so they never collide with the corner instruments.
 - **Three User-Switchable Styles (`SeasonalBackgroundStyle`):**
-  - `0 = Star Chart (Planisphere & Constellations)`: Rotating equatorial star catalog, seasonal constellations, right-ascension/declination circles, and ecliptic degree ticks.
-  - `1 = Seasonal Wireframe Etchings (Astrolabe)`: Fine watchmaker-style vector line-art corners that morph across the 4 observer seasons (Winter geometric snowflakes, Spring botanical blossoms, Summer horizon clouds/arcs, Autumn falling leaves).
-  - `2 = Combined`: Renders both the celestial star chart and the seasonal wireframe etchings together.
 
-### Bottom-Left: Flat Top-Down Heliocentric Astrolabe Orbit (`OrbitWidget.qml` + `orbit.frag`)
+#### Style 0 — Star Chart (Planisphere & Constellations)
+![Background Style 0 — Star Chart & Planisphere](docs/screenshots/bg_planisphere_2k.png)
+
+#### Style 1 — Seasonal Wireframe Etchings (Astrolabe)
+![Background Style 1 — Seasonal Wireframe Etchings](docs/screenshots/bg_astrolabe_2k.png)
+
+#### Style 2 — Combined (Star Chart + Seasonal Etchings)
+![Background Style 2 — Combined Star Chart + Etchings](docs/screenshots/hero_combined_2k.png)
+
+---
+
+### Corner Instruments
+
+| Top-Right: Dual-Ring Prayer Times Clock | Bottom-Left: Solar Orbit & Seasons | Bottom-Right: Topographic Earth Globe |
+| :---: | :---: | :---: |
+| ![Prayer Clock Close-Up](docs/screenshots/closeup_prayer_clock.png) | ![Orbit Close-Up](docs/screenshots/closeup_orbit.png) | ![Earth Close-Up](docs/screenshots/closeup_earth.png) |
+
+#### Bottom-Left: Flat Top-Down Heliocentric Astrolabe Orbit (`OrbitWidget.qml` + `orbit.frag`)
 - **Top-Down Ecliptic Planisphere:** Circular astrolabe plate with degree ticks, cardinal equinox/solstice crosshairs (`MAR`, `JUN`, `SEP`, `DEC`), an inner `JAN 1` anchor pin, and a central solar emblem.
 - **Live Heliocentric Progress & Curved Telemetry:** Swept golden arc from `Jan 1` counter-clockwise to the current day of the year, four hollow equinox/solstice station rings, a glowing active Earth reticle, and a curved bottom telemetry arc (`AUTUMN • DAY 292 / 365 • 79.7%`).
 
-### Bottom-Right: Topographic & Bathymetric Observer-Centered Earth Globe (`EarthWidget.qml` + `earth.frag`)
+#### Bottom-Right: Topographic & Bathymetric Observer-Centered Earth Globe (`EarthWidget.qml` + `earth.frag`)
 - **Lunar-Matched Lithographic Aesthetic:** Styled to match the Moon's muted monochrome/slate palette (`earth_day.png`, `earth_night.jpg`, and `earth_normal.png`).
 - **Real NASA GEBCO 08 Topography & Bathymetry Relief:**
   - `earth_normal.png` (`2048×1024 RGB`) encodes tangent-space surface normals computed from merged land elevation (`gebco_08_rev_elev`) and ocean floor bathymetry (`gebco_08_rev_bath`).
   - `earth_day.png` (`2048×1024 RGBA`) encodes muted land/ocean albedo in `RGB` and continuous bathymetric depth (`[0.58..1.00]`) + land elevation (`[0.20..0.48]`) in `Alpha`.
 - **Physically Based Day/Night Shading & Curved Telemetry:** Uses the same Lommel-Seeliger + Lambertian diffuse model as the Moon, casting relief shadows across mountain ranges (Himalayas, Andes) and mid-ocean ridges near the solar terminator, plus warm nocturnal city lights (`BlackMarble_2016`), polar ice caps, an observer reticle pin, and a curved telemetry arc (`30.0°N, 31.2°E • SOLAR 21:04`) seated cleanly outside the globe's circumference (`r = 0.560 * width`).
 
-### Top-Right: Dual-Ring Analogue Prayer Times Astrolabe Clock (`PrayerClockWidget.qml` + `prayer_clock.frag` + `prayer.js`)
+#### Top-Right: Dual-Ring Analogue Prayer Times Astrolabe Clock (`PrayerClockWidget.qml` + `prayer_clock.frag` + `prayer.js`)
 - **Concentric 12-Hour Rings:**
   - **Inner Ring (`R = 0.245`):** First 12 hours of the day (`00:00 – 12:00`, AM cycle).
   - **Outer Ring (`R = 0.365`):** Second 12 hours of the day (`12:00 – 24:00`, PM cycle).
@@ -48,7 +70,22 @@ A live, physically based astronomical desktop wallpaper for **KDE Plasma 6** (`o
 - **Hybrid AlAdhan API + Offline Solar Zenith Engine:**
   - Fetches daily timings from the free AlAdhan REST API (`https://api.aladhan.com/v1/timings/...`) once per day per location/method, and falls back seamlessly to deterministic Meeus solar-zenith math offline across 7 calculation methods (**MWL**, **Umm al-Qura**, **Egyptian**, **ISNA**, **Diyanet**, **Karachi**, **Tehran**) and both **Standard** and **Hanafi** Asr schools.
 
-### Redesigned Settings Dialog (`config.qml`)
+---
+
+### Layout & Telemetry Variations
+
+#### Minimalist Mode — Corner Instruments Disabled
+![Minimalist Mode — Corner Instruments Disabled](docs/screenshots/minimal_moon_only_2k.png)
+
+#### Pure Instrument Dials — Curved Telemetry Captions Disabled
+![Pure Instrument Dials — Curved Telemetry Captions Disabled](docs/screenshots/clean_no_telemetry_2k.png)
+
+---
+
+### Settings Dialog (`config.qml`)
+
+![Wallpaper Settings Dialog](docs/screenshots/settings_ui.png)
+
 - **Your Location:** One-click **City Preset** dropdown (23 world cities across both hemispheres + `Custom Coordinates`) that automatically fills Latitude/Longitude and toggles Southern Hemisphere orientation when `Latitude < 0°`.
 - **Center Moon & Labels:** Percentage sliders for Moon size, Crater depth, and Dark-side glow, plus a single toggle for all curved info captions (`ShowTelemetryOverlay`).
 - **Background & Star Chart:** Unified style selector (`Star Chart`, `Seasonal Wireframe Etchings`, `Combined`, `Solid Color Only`) with progressive disclosure that hides inactive controls.
@@ -64,6 +101,8 @@ kde-moonphase-wallpaper/
 ├── metadata.json                        # KDE Plasma 6 KPackage manifest (org.kde.plasma.moonphase)
 ├── Makefile                             # Shader baking (qsb), unit tests, headless previews, install
 ├── README.md                            # Architecture & usage documentation
+├── docs/
+│   └── screenshots/                     # 2K (2560×1440) showcase screenshots & instrument close-ups
 ├── contents/
 │   ├── code/
 │   │   ├── astronomy.js                 # .pragma library: Meeus lunar & heliocentric Earth ephemeris
