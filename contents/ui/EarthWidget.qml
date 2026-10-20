@@ -22,6 +22,7 @@ Item {
     property real nightLightsBoost: 1.1
     property real atmosphereIntensity: 0.75
     property bool showObserverPin: true
+    property bool showTelemetry: true
 
     readonly property real observerLatRad: root.observerLatDeg * Math.PI / 180.0
     readonly property real observerLonRad: root.observerLonDeg * Math.PI / 180.0
@@ -29,7 +30,7 @@ Item {
     readonly property real captionSize: Math.max(7, Math.round(width * 0.040))
 
     implicitWidth: 230
-    implicitHeight: width + caption.height + Math.round(width * 0.02)
+    implicitHeight: Math.round(width * 1.12)
 
     function formatLatitude(degrees) {
         return Math.abs(degrees).toFixed(1) + "\u00b0" + (degrees >= 0 ? "N" : "S");
@@ -102,22 +103,25 @@ Item {
         sourceSize: Qt.size(2048, 1024)
     }
 
-    Text {
+    CurvedText {
         id: caption
 
-        anchors.top: earthShader.bottom
-        anchors.topMargin: Math.round(root.width * 0.02)
-        width: root.width
-        horizontalAlignment: Text.AlignHCenter
+        anchors.fill: parent
+        visible: root.showTelemetry
+        centerX: root.width * 0.5
+        centerY: root.width * 0.5
+        // Earth disc radius in earth.frag is 0.50 * width; 0.560 * width places
+        // the curved telemetry arc cleanly outside the globe's circumference.
+        arcRadius: root.width * 0.560
 
         text: root.formatLatitude(root.observerLatDeg)
               + ", " + root.formatLongitude(root.observerLonDeg)
               + "  \u2022  SOLAR " + root.formatSolarTime(root.localSolarTimeHours)
 
         color: Qt.rgba(0.86, 0.88, 0.92, 0.58)
-        font.family: Kirigami.Theme.defaultFont.family
-        font.pixelSize: root.captionSize
-        font.weight: Font.Light
-        font.letterSpacing: 0.8
+        fontFamily: Kirigami.Theme.defaultFont.family
+        pixelSize: root.captionSize
+        fontWeight: Font.Light
+        letterSpacing: 1.0
     }
 }

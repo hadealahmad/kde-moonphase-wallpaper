@@ -186,6 +186,24 @@ Window {
             }
         }
 
+        CurvedText {
+            anchors.fill: parent
+            centerX: scene.width * 0.5
+            centerY: scene.height * 0.5
+            arcRadius: Math.max(moonContainer.width * 0.465, scene.height * 0.298)
+
+            text: window.moonState
+                  ? (window.moonState.phaseName.toUpperCase()
+                     + "  \u2022  " + (window.moonState.illumination * 100).toFixed(1) + "%"
+                     + "  \u2022  DAY " + window.moonState.ageDays.toFixed(1))
+                  : ""
+
+            color: Qt.rgba(0.86, 0.88, 0.92, 0.58)
+            pixelSize: Math.max(9, Math.round(moonContainer.width * 0.026))
+            fontWeight: Font.Light
+            letterSpacing: Math.max(1.2, moonContainer.width * 0.004)
+        }
+
         OrbitWidget {
             width: 230
             height: implicitHeight

@@ -311,95 +311,92 @@ WallpaperItem {
         moonIllumination: root.moonState ? root.moonState.illumination : 0.5
     }
 
-    Column {
+    Item {
+        id: moonContainer
+
         anchors.centerIn: parent
-        spacing: root.configuration.ShowTelemetryOverlay
-                 ? Math.max(6, Math.round(root.moonSize * 0.025))
-                 : 0
+        width: root.moonSize
+        height: root.moonSize
 
-        Item {
-            id: moonContainer
+        ShaderEffect {
+            id: moonShader
 
-            width: root.moonSize
-            height: root.moonSize
+            anchors.fill: parent
 
-            ShaderEffect {
-                id: moonShader
+            // Rendering the shader into an offscreen layer means Qt only
+            // re-runs the fragment shader when a uniform, the size or the
+            // textures change -- not on every desktop repaint.
+            layer.enabled: true
+            layer.smooth: true
 
-                anchors.fill: parent
+            property vector3d sunDirection: root.moonState.sunDirection
+                                            ? Qt.vector3d(root.moonState.sunDirection.x,
+                                                          root.moonState.sunDirection.y,
+                                                          root.moonState.sunDirection.z)
+                                            : Qt.vector3d(0.0, 0.0, 1.0)
+            property vector2d libration: Qt.vector2d(root.moonState.librationLonRad || 0.0,
+                                                     root.moonState.librationLatRad || 0.0)
+            property real earthshine: root.configuration.EarthshineIntensity
+            property real normalStrength: root.configuration.CraterReliefStrength
+            property real rollAngleRad: root.configuration.SouthernHemisphereFlip
+                                        ? Math.PI
+                                        : 0.0
 
-                // Rendering the shader into an offscreen layer means Qt only
-                // re-runs the fragment shader when a uniform, the size or the
-                // textures change -- not on every desktop repaint.
-                layer.enabled: true
-                layer.smooth: true
+            // Image exposes a texture provider, so the decoded texture is
+            // passed straight to the shader (mipmaps included).
+            property variant albedoSource: albedoImage
+            property variant normalSource: normalImage
 
-                property vector3d sunDirection: root.moonState.sunDirection
-                                                ? Qt.vector3d(root.moonState.sunDirection.x,
-                                                              root.moonState.sunDirection.y,
-                                                              root.moonState.sunDirection.z)
-                                                : Qt.vector3d(0.0, 0.0, 1.0)
-                property vector2d libration: Qt.vector2d(root.moonState.librationLonRad || 0.0,
-                                                         root.moonState.librationLatRad || 0.0)
-                property real earthshine: root.configuration.EarthshineIntensity
-                property real normalStrength: root.configuration.CraterReliefStrength
-                property real rollAngleRad: root.configuration.SouthernHemisphereFlip
-                                            ? Math.PI
-                                            : 0.0
-
-                // Image exposes a texture provider, so the decoded texture is
-                // passed straight to the shader (mipmaps included).
-                property variant albedoSource: albedoImage
-                property variant normalSource: normalImage
-
-                fragmentShader: Qt.resolvedUrl("../shaders/moon.frag.qsb")
-            }
-
-            Image {
-                id: albedoImage
-
-                source: Qt.resolvedUrl("../images/moon_albedo.jpg")
-                visible: false
-                asynchronous: false
-                mipmap: true
-                smooth: true
-                sourceSize: Qt.size(2048, 1024)
-            }
-
-            Image {
-                id: normalImage
-
-                source: Qt.resolvedUrl("../images/moon_normal.png")
-                visible: false
-                asynchronous: false
-                mipmap: true
-                smooth: true
-                sourceSize: Qt.size(2048, 1024)
-            }
+            fragmentShader: Qt.resolvedUrl("../shaders/moon.frag.qsb")
         }
 
-        Text {
-            id: telemetry
+        Image {
+            id: albedoImage
 
-            anchors.horizontalCenter: parent.horizontalCenter
-            visible: root.configuration.ShowTelemetryOverlay
-            width: Math.min(root.width * 0.92, implicitWidth)
-            horizontalAlignment: Text.AlignHCenter
-
-            text: root.moonState.phaseName.toUpperCase()
-                  + "  \u2022  " + (root.moonState.illumination * 100).toFixed(1) + "%"
-                  + "  \u2022  DAY " + root.moonState.ageDays.toFixed(1)
-
-            color: root.telemetryColor
-            font.family: Kirigami.Theme.defaultFont.family
-            font.pixelSize: Math.max(9, Math.round(root.moonSize * 0.026))
-            font.weight: Font.Light
-            font.letterSpacing: Math.max(0.5, root.moonSize * 0.003)
-            style: Text.Raised
-            styleColor: root.backgroundLuminance > 0.5
-                        ? Qt.rgba(1.0, 1.0, 1.0, 0.15)
-                        : Qt.rgba(0.0, 0.0, 0.0, 0.25)
+            source: Qt.resolvedUrl("../images/moon_albedo.jpg")
+            visible: false
+            asynchronous: false
+            mipmap: true
+            smooth: true
+            sourceSize: Qt.size(2048, 1024)
         }
+
+        Image {
+            id: normalImage
+
+            source: Qt.resolvedUrl("../images/moon_normal.png")
+            visible: false
+            asynchronous: false
+            mipmap: true
+            smooth: true
+            sourceSize: Qt.size(2048, 1024)
+        }
+    }
+
+    CurvedText {
+        id: telemetry
+
+        anchors.fill: parent
+        visible: root.configuration.ShowTelemetryOverlay
+        centerX: root.width * 0.5
+        centerY: root.height * 0.5
+        // Sits cleanly outside the r = 0.258..0.278 ticked astrolabe circle
+        // (and outside the lunar disc if MoonScale is increased).
+        arcRadius: Math.max(root.moonSize * 0.465, root.height * 0.298)
+
+        text: root.moonState.phaseName.toUpperCase()
+              + "  \u2022  " + (root.moonState.illumination * 100).toFixed(1) + "%"
+              + "  \u2022  DAY " + root.moonState.ageDays.toFixed(1)
+
+        color: root.telemetryColor
+        fontFamily: Kirigami.Theme.defaultFont.family
+        pixelSize: Math.max(9, Math.round(root.moonSize * 0.026))
+        fontWeight: Font.Light
+        letterSpacing: Math.max(1.2, root.moonSize * 0.004)
+        textStyle: Text.Raised
+        styleColor: root.backgroundLuminance > 0.5
+                    ? Qt.rgba(1.0, 1.0, 1.0, 0.15)
+                    : Qt.rgba(0.0, 0.0, 0.0, 0.25)
     }
 
     OrbitWidget {
@@ -418,6 +415,7 @@ WallpaperItem {
         jan1HelioLonRad: root.orbitState ? root.orbitState.jan1HelioLonRad : 1.754
         yearProgress: root.orbitState ? root.orbitState.yearProgress : 0.0
         showGhostEarths: root.configuration.ShowSeasonalGhostEarths
+        showTelemetry: root.configuration.ShowTelemetryOverlay
 
         seasonName: root.orbitState
             ? (root.orbitState.observerSeasonName || root.orbitState.seasonNameNorth)
@@ -450,6 +448,7 @@ WallpaperItem {
         // thumbnail the city lights need a boost to read as more than noise.
         nightLightsBoost: 3.2
         showObserverPin: root.showObserverPin
+        showTelemetry: root.configuration.ShowTelemetryOverlay
     }
 
     PrayerClockWidget {
@@ -475,6 +474,7 @@ WallpaperItem {
         nextPrayerName: root.nextPrayerName
         minutesToNextPrayer: root.minutesToNextPrayer
         methodName: root.prayerMethodName
+        showTelemetry: root.configuration.ShowTelemetryOverlay
     }
 
     Timer {

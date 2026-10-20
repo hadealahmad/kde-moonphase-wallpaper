@@ -20,6 +20,7 @@ Item {
     property real orbitTiltRad: 0.0
     property real axialTiltRad: 0.4091
     property bool showGhostEarths: true
+    property bool showTelemetry: true
 
     property string seasonName: "Winter"
     property int dayOfYear: 1
@@ -31,7 +32,7 @@ Item {
     readonly property real captionSize: Math.max(7, Math.round(width * 0.040))
 
     implicitWidth: 230
-    implicitHeight: width + caption.height + Math.round(width * 0.02)
+    implicitHeight: Math.round(width * 1.08)
 
     function pointAt(theta) {
         return Qt.point(root.width * 0.5 + root.orbitRadius * Math.cos(theta),
@@ -65,10 +66,10 @@ Item {
     // Season labels at all four cardinal orbital points around the flat ring.
     Repeater {
         model: [
-            { "label": "MAR", "angle": 0.0,           "factor": 1.24 },
-            { "label": "JUN", "angle": Math.PI * 0.5, "factor": 1.24 },
-            { "label": "SEP", "angle": Math.PI,       "factor": 1.24 },
-            { "label": "DEC", "angle": Math.PI * 1.5, "factor": 1.24 }
+            { "label": "MAR", "angle": 0.0,           "factor": 1.21 },
+            { "label": "JUN", "angle": Math.PI * 0.5, "factor": 1.21 },
+            { "label": "SEP", "angle": Math.PI,       "factor": 1.21 },
+            { "label": "DEC", "angle": Math.PI * 1.5, "factor": 1.21 }
         ]
 
         delegate: Text {
@@ -104,22 +105,23 @@ Item {
         font.letterSpacing: 0.6
     }
 
-    Text {
+    CurvedText {
         id: caption
 
-        anchors.top: orbitShader.bottom
-        anchors.topMargin: Math.round(root.width * 0.02)
-        width: root.width
-        horizontalAlignment: Text.AlignHCenter
+        anchors.fill: parent
+        visible: root.showTelemetry
+        centerX: root.width * 0.5
+        centerY: root.width * 0.5
+        arcRadius: root.width * 0.518
 
         text: root.seasonName.toUpperCase()
               + "  \u2022  DAY " + root.dayOfYear + " / " + root.daysInYear
               + "  \u2022  " + (root.yearProgress * 100).toFixed(1) + "%"
 
         color: Qt.rgba(0.86, 0.88, 0.92, 0.58)
-        font.family: Kirigami.Theme.defaultFont.family
-        font.pixelSize: root.captionSize
-        font.weight: Font.Light
-        font.letterSpacing: 0.8
+        fontFamily: Kirigami.Theme.defaultFont.family
+        pixelSize: root.captionSize
+        fontWeight: Font.Light
+        letterSpacing: 1.0
     }
 }

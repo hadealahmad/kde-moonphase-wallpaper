@@ -29,6 +29,7 @@ Item {
     property int minutesToNextPrayer: 168
     property string methodName: "MWL"
     property bool showSunrise: true
+    property bool showTelemetry: true
 
     // --- Geometry (matches prayer_clock.frag) -------------------------------
     readonly property real innerRadius: width * 0.245
@@ -37,7 +38,7 @@ Item {
     readonly property real captionSize: Math.max(7, Math.round(width * 0.040))
 
     implicitWidth: 230
-    implicitHeight: width + caption.height + Math.round(width * 0.02)
+    implicitHeight: Math.round(width * 1.08)
 
     function hourToTheta(h) {
         return (Math.PI * 0.5) - (((h % 12.0) + 12.0) % 12.0) / 12.0 * (Math.PI * 2.0);
@@ -68,15 +69,12 @@ Item {
         }
 
         var onActiveRing = (hours >= 12.0) === (root.localTimeHours >= 12.0);
+        var alpha = onActiveRing ? 0.90 : 0.52;
 
-        if (onActiveRing) {
-            if (index === 1 || index === 2 || index === 3) {
-                return Qt.rgba(0.980, 0.855, 0.471, 0.88);  // solar yellow
-            }
-            return Qt.rgba(0.941, 0.961, 1.0, 0.88);        // crisp white
+        if (index === 1 || index === 2 || index === 3) {
+            return Qt.rgba(0.980, 0.855, 0.471, alpha);     // solar yellow (active or transparent)
         }
-
-        return Qt.rgba(0.569, 0.608, 0.686, 0.48);          // muted gray
+        return Qt.rgba(0.941, 0.961, 1.0, alpha);           // crisp white (active or transparent)
     }
 
     // --- Miniature astronomical line-art symbols ----------------------------
@@ -287,7 +285,7 @@ Item {
         delegate: Text {
             required property var modelData
 
-            readonly property point labelPoint: root.pointOnRing(root.width * 0.455, modelData.angle)
+            readonly property point labelPoint: root.pointOnRing(root.width * 0.440, modelData.angle)
 
             x: labelPoint.x - width * 0.5
             y: labelPoint.y - height * 0.5
@@ -300,13 +298,14 @@ Item {
         }
     }
 
-    Text {
+    CurvedText {
         id: caption
 
-        anchors.top: clockShader.bottom
-        anchors.topMargin: Math.round(root.width * 0.02)
-        width: root.width
-        horizontalAlignment: Text.AlignHCenter
+        anchors.fill: parent
+        visible: root.showTelemetry
+        centerX: root.width * 0.5
+        centerY: root.width * 0.5
+        arcRadius: root.width * 0.518
 
         text: root.nextPrayerName.toUpperCase()
               + " " + root.formatHHMM(root.nextPrayerHours)
@@ -314,9 +313,9 @@ Item {
               + "  \u2022  " + root.formatHHMM(root.localTimeHours)
 
         color: Qt.rgba(0.86, 0.88, 0.92, 0.58)
-        font.family: Kirigami.Theme.defaultFont.family
-        font.pixelSize: root.captionSize
-        font.weight: Font.Light
-        font.letterSpacing: 0.8
+        fontFamily: Kirigami.Theme.defaultFont.family
+        pixelSize: root.captionSize
+        fontWeight: Font.Light
+        letterSpacing: 0.9
     }
 }

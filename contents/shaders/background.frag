@@ -36,6 +36,11 @@ float sdSegment(vec2 p, vec2 a, vec2 b) {
     return length(pa - ba * h);
 }
 
+// Crisp screen-space anti-aliased stroke profile (1px sharp hairline).
+float crispStroke(float dist, float halfWidth, float aa) {
+    return 1.0 - smoothstep(halfWidth - aa * 0.5, halfWidth + aa * 0.5, dist);
+}
+
 // Remaps legacy constellation coordinates to compact, vertically centered
 // left/right wings (around y = 0.0, x = +/-0.52) well clear of corner widgets.
 vec2 mapConstellationPt(vec2 v) {
@@ -46,15 +51,17 @@ vec2 mapConstellationPt(vec2 v) {
     return vec2(0.52, 0.0) + (v - vec2(0.57, 0.21)) * scale;
 }
 
-float drawEdge(vec2 p, vec2 aRaw, vec2 bRaw) {
+float drawEdge(vec2 p, vec2 aRaw, vec2 bRaw, float aa) {
     vec2 a = mapConstellationPt(aRaw);
     vec2 b = mapConstellationPt(bRaw);
     float d = sdSegment(p, a, b);
-    float line = exp(-pow(d / 0.0011, 2.0)) * 0.28;
-    float nodeA = exp(-pow(length(p - a) / 0.0038, 2.0)) * 0.90;
-    float nodeB = exp(-pow(length(p - b) / 0.0038, 2.0)) * 0.90;
-    float ringA = exp(-pow((length(p - a) - 0.0076) / 0.0011, 2.0)) * 0.36;
-    float ringB = exp(-pow((length(p - b) - 0.0076) / 0.0011, 2.0)) * 0.36;
+    float da = length(p - a);
+    float db = length(p - b);
+    float line = crispStroke(d, 0.00055, aa) * 0.36;
+    float nodeA = (1.0 - smoothstep(0.0022 - aa * 0.5, 0.0022 + aa * 0.5, da)) * 0.92;
+    float nodeB = (1.0 - smoothstep(0.0022 - aa * 0.5, 0.0022 + aa * 0.5, db)) * 0.92;
+    float ringA = crispStroke(abs(da - 0.0068), 0.00050, aa) * 0.45;
+    float ringB = crispStroke(abs(db - 0.0068), 0.00050, aa) * 0.45;
     return max(line, max(max(nodeA, nodeB), max(ringA, ringB)));
 }
 
@@ -80,41 +87,48 @@ float starLayer(vec2 p, float scale, float density, float t) {
 }
 
 // Concept 1: Celestial Planisphere & Star Chart
-vec3 evalPlanisphere(vec2 p, float r, float theta, int season, float t) {
-    vec3 colSilver = vec3(0.82, 0.86, 0.94);
+vec3 evalPlanisphere(vec2 p, float r, float theta, int season, float t, float aa) {
+    vec3 colSilver = vec3(0.84, 0.88, 0.96);
     vec3 colWarm   = vec3(0.95, 0.89, 0.74);
-    vec3 colSlate  = vec3(0.45, 0.52, 0.66);
+    vec3 colSlate  = vec3(0.52, 0.60, 0.74);
 
     float moonKeepout = smoothstep(0.22, 0.27, r);
     vec3 add = vec3(0.0);
 
-    // Concentric celestial coordinate circles
-    float r1 = exp(-pow((r - 0.265) / 0.0014, 2.0)) * 0.32;
-    float r2 = exp(-pow((r - 0.420) / 0.0012, 2.0)) * 0.18;
-    float r3 = exp(-pow((r - 0.620) / 0.0012, 2.0)) * 0.14;
-    float r4 = exp(-pow((r - 0.840) / 0.0012, 2.0)) * 0.10;
+    // Concentric celestial coordinate circles (crisp 1px anti-aliased strokes)
+    float r1 = crispStroke(abs(r - 0.265), 0.00055, aa) * 0.54;
+    float r2 = crispStroke(abs(r - 0.420), 0.00048, aa) * 0.26;
+    float r3 = crispStroke(abs(r - 0.620), 0.00048, aa) * 0.20;
+    float r4 = crispStroke(abs(r - 0.840), 0.00048, aa) * 0.14;
     add += colSlate * (r1 + r2 + r3 + r4);
 
-    // Fine degree ticks around the inner Moon framing ring (r = 0.265)
+    // Sharp degree ticks around the inner Moon framing ring (r = 0.265)
     float nTicks = 72.0;
     float stepA = TWO_PI / nTicks;
     float idx = floor((theta + 0.5 * stepA) / stepA);
     float ang = idx * stepA;
     float dAng = abs(atan(sin(theta - ang), cos(theta - ang))) * r;
     bool major = mod(idx, 6.0) < 0.5;
-    float tLen = major ? 0.012 : 0.005;
-    float tick = (1.0 - smoothstep(tLen * 0.8, tLen, abs(r - 0.265)))
-               * exp(-pow(dAng / 0.0012, 2.0)) * (major ? 0.38 : 0.18);
+    float tLen = major ? 0.011 : 0.0050;
+    float tickRadial = 1.0 - smoothstep(tLen - aa * 0.5, tLen + aa * 0.5, abs(r - 0.265));
+    float tickHalfW = major ? 0.00055 : 0.00042;
+    float tick = tickRadial * crispStroke(dAng, tickHalfW, aa) * (major ? 0.62 : 0.34);
     add += colSilver * tick;
+
+    // Keepout around the bottom curved Moon telemetry arc (r in [0.28, 0.32], bottom sector)
+    float bottomAngDist = abs(atan(sin(theta + 0.5 * PI), cos(theta + 0.5 * PI)));
+    float textSectorKeepout = 1.0 - (1.0 - smoothstep(0.32, 0.42, bottomAngDist))
+                                  * (1.0 - smoothstep(0.018, 0.026, abs(r - 0.298)));
 
     // 12 radial hour-angle lines broken inside r = 0.265
     float hStep = TWO_PI / 12.0;
     float hIdx = floor((theta + 0.5 * hStep) / hStep);
     float hAng = hIdx * hStep;
     float hPerp = abs(atan(sin(theta - hAng), cos(theta - hAng))) * r;
-    float hLine = exp(-pow(hPerp / 0.0011, 2.0))
-                * smoothstep(0.275, 0.30, r)
-                * (1.0 - smoothstep(0.82, 0.92, r)) * 0.09;
+    float hLine = crispStroke(hPerp, 0.00048, aa)
+                * smoothstep(0.278, 0.295, r)
+                * (1.0 - smoothstep(0.82, 0.92, r))
+                * textSectorKeepout * 0.14;
     add += colSlate * hLine;
 
     // Slow celestial sphere rotation when animated
@@ -133,71 +147,71 @@ vec3 evalPlanisphere(vec2 p, float r, float theta, int season, float t) {
     float cMask = 0.0;
     if (season == 0) {
         // SPRING: Leo (left) & Virgo (right)
-        cMask = max(cMask, drawEdge(p, vec2(-0.68, 0.12), vec2(-0.54, 0.16)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.54, 0.16), vec2(-0.46, 0.26)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.46, 0.26), vec2(-0.52, 0.35)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.52, 0.35), vec2(-0.60, 0.32)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.54, 0.16), vec2(-0.38, 0.10)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.38, 0.10), vec2(-0.46, 0.26)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.68, 0.12), vec2(-0.54, 0.16), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.54, 0.16), vec2(-0.46, 0.26), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.46, 0.26), vec2(-0.52, 0.35), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.52, 0.35), vec2(-0.60, 0.32), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.54, 0.16), vec2(-0.38, 0.10), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.38, 0.10), vec2(-0.46, 0.26), aa));
 
-        cMask = max(cMask, drawEdge(p, vec2(0.42, 0.08), vec2(0.55, 0.18)));
-        cMask = max(cMask, drawEdge(p, vec2(0.55, 0.18), vec2(0.66, 0.14)));
-        cMask = max(cMask, drawEdge(p, vec2(0.55, 0.18), vec2(0.58, 0.31)));
-        cMask = max(cMask, drawEdge(p, vec2(0.66, 0.14), vec2(0.75, 0.24)));
+        cMask = max(cMask, drawEdge(p, vec2(0.42, 0.08), vec2(0.55, 0.18), aa));
+        cMask = max(cMask, drawEdge(p, vec2(0.55, 0.18), vec2(0.66, 0.14), aa));
+        cMask = max(cMask, drawEdge(p, vec2(0.55, 0.18), vec2(0.58, 0.31), aa));
+        cMask = max(cMask, drawEdge(p, vec2(0.66, 0.14), vec2(0.75, 0.24), aa));
     } else if (season == 1) {
         // SUMMER: Cygnus (left) & Lyra (right)
-        cMask = max(cMask, drawEdge(p, vec2(-0.66, 0.34), vec2(-0.55, 0.22)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.55, 0.22), vec2(-0.43, 0.09)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.67, 0.13), vec2(-0.55, 0.22)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.55, 0.22), vec2(-0.44, 0.31)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.66, 0.34), vec2(-0.55, 0.22), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.55, 0.22), vec2(-0.43, 0.09), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.67, 0.13), vec2(-0.55, 0.22), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.55, 0.22), vec2(-0.44, 0.31), aa));
 
-        cMask = max(cMask, drawEdge(p, vec2(0.46, 0.32), vec2(0.54, 0.25)));
-        cMask = max(cMask, drawEdge(p, vec2(0.54, 0.25), vec2(0.64, 0.27)));
-        cMask = max(cMask, drawEdge(p, vec2(0.64, 0.27), vec2(0.60, 0.15)));
-        cMask = max(cMask, drawEdge(p, vec2(0.60, 0.15), vec2(0.50, 0.13)));
-        cMask = max(cMask, drawEdge(p, vec2(0.50, 0.13), vec2(0.54, 0.25)));
+        cMask = max(cMask, drawEdge(p, vec2(0.46, 0.32), vec2(0.54, 0.25), aa));
+        cMask = max(cMask, drawEdge(p, vec2(0.54, 0.25), vec2(0.64, 0.27), aa));
+        cMask = max(cMask, drawEdge(p, vec2(0.64, 0.27), vec2(0.60, 0.15), aa));
+        cMask = max(cMask, drawEdge(p, vec2(0.60, 0.15), vec2(0.50, 0.13), aa));
+        cMask = max(cMask, drawEdge(p, vec2(0.50, 0.13), vec2(0.54, 0.25), aa));
     } else if (season == 2) {
         // AUTUMN: Pegasus Great Square (left) & Cassiopeia W (right)
-        cMask = max(cMask, drawEdge(p, vec2(-0.68, 0.30), vec2(-0.48, 0.33)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.48, 0.33), vec2(-0.45, 0.14)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.45, 0.14), vec2(-0.65, 0.11)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.65, 0.11), vec2(-0.68, 0.30)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.48, 0.33), vec2(-0.37, 0.40)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.68, 0.30), vec2(-0.48, 0.33), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.48, 0.33), vec2(-0.45, 0.14), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.45, 0.14), vec2(-0.65, 0.11), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.65, 0.11), vec2(-0.68, 0.30), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.48, 0.33), vec2(-0.37, 0.40), aa));
 
-        cMask = max(cMask, drawEdge(p, vec2(0.42, 0.32), vec2(0.50, 0.21)));
-        cMask = max(cMask, drawEdge(p, vec2(0.50, 0.21), vec2(0.58, 0.27)));
-        cMask = max(cMask, drawEdge(p, vec2(0.58, 0.27), vec2(0.66, 0.16)));
-        cMask = max(cMask, drawEdge(p, vec2(0.66, 0.16), vec2(0.75, 0.25)));
+        cMask = max(cMask, drawEdge(p, vec2(0.42, 0.32), vec2(0.50, 0.21), aa));
+        cMask = max(cMask, drawEdge(p, vec2(0.50, 0.21), vec2(0.58, 0.27), aa));
+        cMask = max(cMask, drawEdge(p, vec2(0.58, 0.27), vec2(0.66, 0.16), aa));
+        cMask = max(cMask, drawEdge(p, vec2(0.66, 0.16), vec2(0.75, 0.25), aa));
     } else {
         // WINTER: Orion (left) & Taurus/Hyades (right)
-        cMask = max(cMask, drawEdge(p, vec2(-0.64, 0.35), vec2(-0.48, 0.32)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.64, 0.35), vec2(-0.58, 0.21)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.48, 0.32), vec2(-0.52, 0.20)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.58, 0.21), vec2(-0.52, 0.20)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.58, 0.21), vec2(-0.62, 0.07)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.52, 0.20), vec2(-0.46, 0.06)));
-        cMask = max(cMask, drawEdge(p, vec2(-0.62, 0.07), vec2(-0.46, 0.06)));
+        cMask = max(cMask, drawEdge(p, vec2(-0.64, 0.35), vec2(-0.48, 0.32), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.64, 0.35), vec2(-0.58, 0.21), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.48, 0.32), vec2(-0.52, 0.20), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.58, 0.21), vec2(-0.52, 0.20), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.58, 0.21), vec2(-0.62, 0.07), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.52, 0.20), vec2(-0.46, 0.06), aa));
+        cMask = max(cMask, drawEdge(p, vec2(-0.62, 0.07), vec2(-0.46, 0.06), aa));
 
-        cMask = max(cMask, drawEdge(p, vec2(0.44, 0.14), vec2(0.55, 0.22)));
-        cMask = max(cMask, drawEdge(p, vec2(0.55, 0.22), vec2(0.68, 0.31)));
-        cMask = max(cMask, drawEdge(p, vec2(0.44, 0.14), vec2(0.57, 0.16)));
-        cMask = max(cMask, drawEdge(p, vec2(0.57, 0.16), vec2(0.72, 0.21)));
+        cMask = max(cMask, drawEdge(p, vec2(0.44, 0.14), vec2(0.55, 0.22), aa));
+        cMask = max(cMask, drawEdge(p, vec2(0.55, 0.22), vec2(0.68, 0.31), aa));
+        cMask = max(cMask, drawEdge(p, vec2(0.44, 0.14), vec2(0.57, 0.16), aa));
+        cMask = max(cMask, drawEdge(p, vec2(0.57, 0.16), vec2(0.72, 0.21), aa));
     }
     add += mix(colSilver, colWarm, 0.45) * cMask * moonKeepout;
     return add;
 }
 
 // Concept 3: Engraved Astrolabe & Seasonal Wireframe Etchings
-vec3 evalAstrolabeEtching(vec2 p, float r, float theta, int season, float t) {
-    vec3 colSilver = vec3(0.82, 0.86, 0.94);
+vec3 evalAstrolabeEtching(vec2 p, float r, float theta, int season, float t, float aa) {
+    vec3 colSilver = vec3(0.84, 0.88, 0.96);
     vec3 colWarm   = vec3(0.95, 0.89, 0.74);
     vec3 colSlate  = vec3(0.48, 0.55, 0.68);
 
     vec3 add = vec3(0.0);
 
-    // Central Astrolabe Moon Frame
-    float rInner = exp(-pow((r - 0.258) / 0.0014, 2.0)) * 0.42;
-    float rOuter = exp(-pow((r - 0.278) / 0.0012, 2.0)) * 0.28;
+    // Central Astrolabe Moon Frame (crisp 1px rings & ticks)
+    float rInner = crispStroke(abs(r - 0.258), 0.00055, aa) * 0.58;
+    float rOuter = crispStroke(abs(r - 0.278), 0.00050, aa) * 0.42;
     add += colSilver * (rInner + rOuter);
 
     float nTicks = 120.0;
@@ -206,15 +220,23 @@ vec3 evalAstrolabeEtching(vec2 p, float r, float theta, int season, float t) {
     float ang = idx * stepA;
     float dAng = abs(atan(sin(theta - ang), cos(theta - ang))) * r;
     bool major = mod(idx, 10.0) < 0.5;
-    float inBand = smoothstep(0.258, 0.261, r) * (1.0 - smoothstep(major ? 0.276 : 0.270, major ? 0.276 : 0.272, r));
-    float tick = inBand * exp(-pow(dAng / 0.0010, 2.0)) * (major ? 0.45 : 0.20);
+    float rEnd = major ? 0.276 : 0.271;
+    float inBand = smoothstep(0.258 - aa * 0.5, 0.258 + aa * 0.5, r)
+                 * (1.0 - smoothstep(rEnd - aa * 0.5, rEnd + aa * 0.5, r));
+    float tickHalfW = major ? 0.00052 : 0.00038;
+    float tick = inBand * crispStroke(dAng, tickHalfW, aa) * (major ? 0.64 : 0.34);
     add += mix(colSilver, colWarm, major ? 0.5 : 0.0) * tick;
+
+    float bottomAngDist = abs(atan(sin(theta + 0.5 * PI), cos(theta + 0.5 * PI)));
+    float textSectorKeepout = 1.0 - (1.0 - smoothstep(0.32, 0.42, bottomAngDist))
+                                  * (1.0 - smoothstep(0.018, 0.026, abs(r - 0.298)));
 
     float cardAng = mod(theta + PI * 0.25, PI * 0.5) - PI * 0.25;
     float cardPerp = abs(sin(cardAng)) * r;
-    float cardLine = exp(-pow(cardPerp / 0.0011, 2.0))
+    float cardLine = crispStroke(cardPerp, 0.00050, aa)
                    * smoothstep(0.282, 0.295, r)
-                   * (1.0 - smoothstep(0.36, 0.42, r)) * 0.25;
+                   * (1.0 - smoothstep(0.36, 0.42, r))
+                   * textSectorKeepout * 0.34;
     add += colWarm * cardLine;
 
     // Seasonal Engraved Corner Etchings (keep center & all 3 corner widgets clear)
@@ -272,6 +294,7 @@ void main() {
     vec2 p = vec2((uv.x - 0.5) * ubuf.aspectRatio, 0.5 - uv.y);
     float r = length(p);
     float theta = atan(p.y, p.x);
+    float aa = max(fwidth(r), 0.00050);
 
     // Base deep-space radial gradient anchored to baseColor
     vec3 bgEdge = ubuf.baseColor.rgb;
@@ -283,12 +306,12 @@ void main() {
 
     vec3 motif = vec3(0.0);
     if (style == 0) {
-        motif = evalPlanisphere(p, r, theta, season, ubuf.time);
+        motif = evalPlanisphere(p, r, theta, season, ubuf.time, aa);
     } else if (style == 1) {
-        motif = evalAstrolabeEtching(p, r, theta, season, ubuf.time);
+        motif = evalAstrolabeEtching(p, r, theta, season, ubuf.time, aa);
     } else {
-        motif = evalPlanisphere(p, r, theta, season, ubuf.time) * 0.85
-              + evalAstrolabeEtching(p, r, theta, season, ubuf.time) * 0.75;
+        motif = evalPlanisphere(p, r, theta, season, ubuf.time, aa) * 0.85
+              + evalAstrolabeEtching(p, r, theta, season, ubuf.time, aa) * 0.75;
     }
 
     // Scale by user intensity setting (0.65 default maps to 1.0x reference)
