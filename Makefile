@@ -7,7 +7,7 @@
 QSB ?= $(shell command -v qsb 2>/dev/null || echo /usr/lib64/qt6/bin/qsb)
 
 SHADER_DIR := contents/shaders
-FRAGS      := $(SHADER_DIR)/moon.frag $(SHADER_DIR)/orbit.frag $(SHADER_DIR)/earth.frag
+FRAGS      := $(SHADER_DIR)/moon.frag $(SHADER_DIR)/orbit.frag $(SHADER_DIR)/earth.frag $(SHADER_DIR)/background.frag
 QSB_OUTS   := $(FRAGS:.frag=.frag.qsb)
 
 # Same target set as Qt's `qsb --qt6`, written out explicitly so the exact

@@ -14,6 +14,7 @@ import QtQuick
 import QtQuick.Window
 
 import "../contents/ui"
+import "../contents/ui" as UI
 import "../contents/code/astronomy.js" as Astronomy
 
 Window {
@@ -26,29 +27,30 @@ Window {
     title: "Moon Phase - full wallpaper QA"
 
     readonly property string outputDir: "file:///tmp/opencode/full_wallpaper/"
+    readonly property string backgroundColor: "#05070d"
     readonly property real observerLat: 30.0
     readonly property real observerLon: 31.2
 
     readonly property var checkpoints: [
         {
-            "name": "Jan 1 - 00:00 UTC",
-            "file": "checkpoint_1_jan01.png",
-            "date": new Date(Date.UTC(2026, 0, 1, 0, 0, 0))
+            "name": "Winter - Jan 1 - 12:00 UTC",
+            "file": "01_winter_jan1.png",
+            "date": new Date(Date.UTC(2026, 0, 1, 12, 0, 0))
         },
         {
-            "name": "June Solstice - 12:00 UTC",
-            "file": "checkpoint_2_june_solstice.png",
-            "date": new Date(Date.UTC(2026, 5, 21, 12, 0, 0))
+            "name": "Spring - Apr 15 - 12:00 UTC",
+            "file": "02_spring_blossoms.png",
+            "date": new Date(Date.UTC(2026, 3, 15, 12, 0, 0))
         },
         {
-            "name": "Oct 19 - 19:00 UTC (local evening)",
-            "file": "checkpoint_3_oct19_evening.png",
+            "name": "Summer - June Solstice - 08:24 UTC",
+            "file": "03_summer_clouds.png",
+            "date": new Date(Date.UTC(2026, 5, 21, 8, 24, 0))
+        },
+        {
+            "name": "Autumn - Oct 19 - 19:00 UTC (local evening)",
+            "file": "04_autumn_leaves.png",
             "date": new Date(Date.UTC(2026, 9, 19, 19, 0, 0))
-        },
-        {
-            "name": "Dec 31 - 23:59 UTC",
-            "file": "checkpoint_4_dec31.png",
-            "date": new Date(Date.UTC(2026, 11, 31, 23, 59, 0))
         }
     ]
 
@@ -96,9 +98,16 @@ Window {
         width: window.width
         height: window.height
 
-        Rectangle {
+        UI.BackgroundWidget {
+            id: backgroundWidget
+
             anchors.fill: parent
-            color: "#05070d"
+            baseColor: window.backgroundColor
+            seasonIndex: window.orbitState ? window.orbitState.observerSeasonIndex : 3
+            animate: false
+            time: 42.0
+            intensity: 0.75
+            moonIllumination: window.moonState ? window.moonState.illumination : 0.5
         }
 
         // --- Moon ----------------------------------------------------------
@@ -168,7 +177,9 @@ Window {
             yearProgress: window.orbitState ? window.orbitState.yearProgress : 0.0
             showGhostEarths: true
 
-            seasonName: window.orbitState ? window.orbitState.seasonNameNorth : ""
+            seasonName: window.orbitState
+                ? (window.orbitState.observerSeasonName || window.orbitState.seasonNameNorth)
+                : "Winter"
             dayOfYear: window.orbitState ? window.orbitState.dayOfYear : 1
             daysInYear: window.orbitState ? window.orbitState.daysInYear : 365
         }

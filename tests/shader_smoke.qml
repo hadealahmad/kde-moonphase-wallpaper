@@ -1,4 +1,5 @@
-// Self-contained visual smoke test for contents/shaders/moon.frag.qsb
+// Self-contained visual smoke test for all four compiled shaders:
+// moon.frag.qsb, background.frag.qsb, orbit.frag.qsb and earth.frag.qsb
 //
 // It does NOT depend on the astronomy code or the real moon textures: both
 // samplers are fed from procedural QML items rendered through
@@ -15,17 +16,22 @@
 // On success it writes /tmp/opencode/shader_smoke/moon_smoke.png and quits.
 // The 2x2 grid is: full moon, first quarter, waxing crescent (earthshine),
 // full moon with libration (+lon, +lat) and roll +0.4 rad.
+// The 512x128 strip underneath loads background.frag.qsb twice (winter and
+// summer motifs), and the last row renders OrbitWidget + EarthWidget, so a
+// single run loads all four compiled shaders: moon, background, orbit, earth.
 
 import QtQuick
 import QtQuick.Window
 
+import "../contents/ui" as UI
+
 Window {
     id: win
     width: 512
-    height: 512
+    height: 880
     visible: true
     color: "#0b0d12"
-    title: "moon.frag smoke test"
+    title: "moon/background/orbit/earth shader smoke test"
 
     // ------------------------------------------------------------------
     //  Procedural albedo: 2:1, north up, prime meridian (u = 0.5) marked
@@ -111,9 +117,20 @@ Window {
         id: captureRoot
         anchors.fill: parent
 
+        // Opaque backdrop so the grabbed PNG matches what the window shows:
+        // grabToImage() of an Item keeps its own alpha, which otherwise leaves
+        // the widget captions floating on a transparent (white-in-viewer) page.
+        Rectangle {
+            anchors.fill: parent
+            color: win.color
+            z: -1
+        }
+
         Grid {
             columns: 2
-            anchors.fill: parent
+            y: 0
+            width: parent.width
+            height: 512
 
             Repeater {
                 model: [
@@ -143,6 +160,69 @@ Window {
                     property variant normalSource: normalTex
                 }
             }
+        }
+
+        // --- background.frag.qsb: winter and summer motifs ----------------
+        // Loads the seasonal shader through the real wrapper component so the
+        // UBO layout, the .qsb file and the fallback path are all exercised.
+        Row {
+            y: 512
+            width: parent.width
+            height: 128
+
+            UI.BackgroundWidget {
+                width: 256
+                height: 128
+                baseColor: "#05070d"
+                seasonIndex: 3          // Winter: snow + bokeh crystals
+                animate: false
+                time: 42.0
+                intensity: 0.75
+                moonIllumination: 1.0
+            }
+
+            UI.BackgroundWidget {
+                width: 256
+                height: 128
+                baseColor: "#05070d"
+                seasonIndex: 1          // Summer: sparse moonlit cirrus
+                animate: false
+                time: 42.0
+                intensity: 0.75
+                moonIllumination: 1.0
+            }
+        }
+
+        // --- orbit.frag.qsb + earth.frag.qsb -----------------------------
+        // The corner widgets own the remaining two shaders; rendering them
+        // here means `make smoke` compiles and draws every .qsb in one pass.
+        UI.OrbitWidget {
+            x: 40
+            y: 660
+            width: 200
+            height: implicitHeight
+
+            earthHelioLonRad: 1.754
+            jan1HelioLonRad: 1.754
+            yearProgress: 0.0
+            showGhostEarths: true
+            seasonName: "Winter"
+            dayOfYear: 1
+            daysInYear: 365
+        }
+
+        UI.EarthWidget {
+            x: 272
+            y: 660
+            width: 200
+            height: implicitHeight
+
+            sunVectorWorld: Qt.vector3d(1.0, 0.0, 0.0)
+            observerLatDeg: 30.0
+            observerLonDeg: 31.2
+            localSolarTimeHours: 12.0
+            nightLightsBoost: 3.2
+            showObserverPin: true
         }
     }
 

@@ -48,6 +48,35 @@ WallpaperItem {
     readonly property int cornerMargin: root.configuration
                                         ? root.configuration.CornerMargin
                                         : 36
+    readonly property color backgroundColor: root.configuration
+                                           ? root.configuration.BackgroundColor
+                                           : "#05070d"
+
+    readonly property int seasonalBackgroundMode:
+        (root.configuration.SeasonalBackgroundMode !== undefined)
+            ? Number(root.configuration.SeasonalBackgroundMode) : 0
+    readonly property bool seasonalBackgroundAnimate:
+        (root.configuration.SeasonalBackgroundAnimate !== undefined)
+            ? Boolean(root.configuration.SeasonalBackgroundAnimate) : true
+    readonly property real seasonalBackgroundIntensity:
+        (root.configuration.SeasonalBackgroundIntensity !== undefined)
+            ? Number(root.configuration.SeasonalBackgroundIntensity) : 0.65
+    readonly property int seasonalBackgroundFps:
+        (root.configuration.SeasonalBackgroundFps !== undefined)
+            ? Number(root.configuration.SeasonalBackgroundFps) : 20
+
+    // Resolved season index for BackgroundWidget:
+    // -1 = Off, 0 = Spring, 1 = Summer, 2 = Autumn, 3 = Winter
+    readonly property int activeSeasonIndex: {
+        if (root.seasonalBackgroundMode === 5) {
+            return -1;
+        }
+        if (root.seasonalBackgroundMode >= 1 && root.seasonalBackgroundMode <= 4) {
+            return root.seasonalBackgroundMode - 1;
+        }
+        return (root.orbitState && root.orbitState.observerSeasonIndex !== undefined)
+            ? root.orbitState.observerSeasonIndex : 3;
+    }
 
     // Scrubbing any of these settings recomputes the scene deterministically.
     onDebugActiveChanged: root.updateAstronomy()
@@ -159,9 +188,15 @@ WallpaperItem {
         return Astronomy.getMoonState(new Date(timestamp), latitude, longitude);
     }
 
-    Rectangle {
+    BackgroundWidget {
+        id: backgroundWidget
         anchors.fill: parent
-        color: root.configuration.BackgroundColor
+        baseColor: root.backgroundColor
+        seasonIndex: root.activeSeasonIndex
+        animate: root.seasonalBackgroundAnimate
+        intensity: root.seasonalBackgroundIntensity
+        fps: root.seasonalBackgroundFps
+        moonIllumination: root.moonState ? root.moonState.illumination : 0.5
     }
 
     Column {
@@ -272,7 +307,9 @@ WallpaperItem {
         yearProgress: root.orbitState ? root.orbitState.yearProgress : 0.0
         showGhostEarths: root.configuration.ShowSeasonalGhostEarths
 
-        seasonName: root.orbitState ? root.orbitState.seasonNameNorth : ""
+        seasonName: root.orbitState
+            ? (root.orbitState.observerSeasonName || root.orbitState.seasonNameNorth)
+            : "Winter"
         dayOfYear: root.orbitState ? root.orbitState.dayOfYear : 1
         daysInYear: root.orbitState ? root.orbitState.daysInYear : 365
     }
