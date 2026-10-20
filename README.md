@@ -13,7 +13,7 @@ A live, physically based astronomical desktop wallpaper for **KDE Plasma 6** (`o
 ![Center 3D Moon with Sharp Ticked Bezel & Curved Telemetry](docs/screenshots/closeup_moon.png)
 
 - **Jean Meeus Ephemeris (Ch. 47/48):** True lunar phase angle, illuminated fraction, synodic age, selenocentric sun direction, and **optical libration** in longitude and latitude (the Moon visibly wobbles across the month).
-- **LRO Elevation & Normal Mapping:** Uses `2048×1024` equirectangular lunar maps (`moon_albedo.jpg` and `moon_normal.png`) derived from NASA's Lunar Reconnaissance Orbiter (LRO) CGI Moon Kit (`ldem_4.tif` + `lroc_color_poles_2k.tif`).
+- **LRO Elevation & Normal Mapping:** Uses `2048×1024` equirectangular lunar maps (`moon_albedo.jpg` and `moon_normal.png`) derived from NASA's Lunar Reconnaissance Orbiter (LRO) CGI Moon Kit (`ldem_16.tif` / `ldem_4.tif` + `lroc_color_poles_4k.tif` / `lroc_color_poles_2k.tif`).
 - **Hapke / Lommel-Seeliger + Lambert Regolith BRDF:** Soft solar terminator with realistic limb brightening, micro-shadowing across crater rims, and configurable **Earthshine** illuminating the night hemisphere.
 - **Invariant Centering & Curved Telemetry Arc (`CurvedText.qml`):** The lunar disc is locked to `anchors.centerIn: parent` so toggling captions never shifts the Moon. Its curved telemetry caption (`WANING GIBBOUS • 61.9% • DAY 9.0`) follows a circular bottom arc outside the `r = 0.265` ticked astrolabe bezel with an automatic radial-spoke keepout zone.
 
@@ -227,6 +227,32 @@ make smoke
 make preview-full
 ```
 
+---
+
+## 6. Credits, Data Sources & Attributions
+
+All scientific textures, elevation models, astronomical algorithms, and external services used in this wallpaper are credited below:
+
+### Lunar Surface & Elevation Maps (`moon_albedo.jpg`, `moon_normal.png`)
+- **Source:** [NASA Scientific Visualization Studio (SVS) — CGI Moon Kit (SVS #4720)](https://svs.gsfc.nasa.gov/4720)
+- **Credits:** Ernie Wright (USRA / NASA Goddard Space Flight Center), Lunar Reconnaissance Orbiter Camera (**LROC** Wide Angle Camera color mosaic, Arizona State University), and Lunar Orbiter Laser Altimeter (**LOLA** `ldem_16` / `ldem_4` global elevation model, NASA GSFC).
+- **License:** Public Domain (NASA Media Usage Guidelines).
+
+### Earth Surface, Topography, Bathymetry & Night Lights (`earth_day.png`, `earth_night.jpg`, `earth_normal.png`)
+Exact SHA-256 checksums and source URLs for all five upstream Earth datasets are recorded in [`scripts/earth_assets_provenance.txt`](scripts/earth_assets_provenance.txt):
+- **Blue Marble Next Generation (`land_shallow_topo_2048.tif`):** [NASA Visible Earth — Blue Marble: Land Surface, Shallow Water, and Shaded Topography](https://visibleearth.nasa.gov/images/57752/blue-marble-land-surface-shallow-water-and-shaded-topography) — Credit: Reto Stöckli, NASA Earth Observatory (Public Domain).
+- **Black Marble Nighttime Lights (`BlackMarble_2016_3km.jpg`):** [NASA Visible Earth — Earth at Night (Black Marble 2016)](https://visibleearth.nasa.gov/images/144898/earth-at-night-black-marble-2016-color-maps) — Credit: NASA Earth Observatory images by Joshua Stevens, using Suomi NPP VIIRS data from Miguel Román, NASA GSFC (Public Domain).
+- **Global Land Topography (`gebco_08_rev_elev_21600x10800.png`):** [NASA Visible Earth — Topography](https://visibleearth.nasa.gov/images/73934/topography) — Credit: Jesse Allen, NASA Earth Observatory, using data from the **General Bathymetric Chart of the Oceans (GEBCO)** produced by the British Oceanographic Data Centre (Public Domain).
+- **Global Ocean Bathymetry (`gebco_08_rev_bath_21600x10800.png`):** [NASA Visible Earth — Bathymetry](https://visibleearth.nasa.gov/images/73963/bathymetry) — Credit: Jesse Allen, NASA Earth Observatory, using **GEBCO_08** global relief data (Public Domain).
+
+### Astronomical & Mathematical References (`astronomy.js`, `prayer.js`)
+- **Lunar & Solar Ephemeris (`contents/code/astronomy.js`):** Implemented from **Jean Meeus**, *Astronomical Algorithms* (2nd Edition, Willmann-Bell, 1998) — Chapters 22, 25, 47, 48, and 53 (solar coordinates, equation of time, lunar position, phase angle, illuminated fraction, and optical libration in longitude and latitude).
+- **Prayer Time Solar-Zenith Equations & Live API (`contents/code/prayer.js`):**
+  - Live daily timings (when enabled) are fetched from the free, open [**AlAdhan Prayer Times REST API**](https://aladhan.com/prayer-times-api) by [Islamic Network](https://islamic.network/).
+  - Offline solar-zenith calculation uses standard astronomical twilight/shadow formulas across MWL, ISNA, Umm al-Qura, Egyptian General Authority, Diyanet, Karachi, and Tehran conventions.
+
+---
+
 ## License
 
-GPL-2.0-or-later. Lunar and Earth textures derive from public-domain NASA LRO, Blue Marble Next Generation, Black Marble, and GEBCO datasets.
+Source code and shaders are licensed under **GPL-2.0-or-later** (`SPDX-License-Identifier: GPL-2.0-or-later`). NASA LRO, Blue Marble, Black Marble, and GEBCO imagery products are in the public domain under [NASA Media Usage Guidelines](https://www.nasa.gov/nasa-brand-center/images-and-media/).
