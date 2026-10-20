@@ -190,9 +190,6 @@ Item {
         width: root.width
         height: root.width
 
-        layer.enabled: true
-        layer.smooth: true
-
         property real localTimeHours: root.localTimeHours
         property real fajrHours: root.fajrHours
         property real sunriseHours: root.sunriseHours

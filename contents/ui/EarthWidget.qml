@@ -147,6 +147,7 @@ Item {
         id: dayImage
 
         source: (root.visible && root.texturesLoaded) ? Qt.resolvedUrl("../images/earth_day.png") : ""
+        cache: false
         visible: false
         asynchronous: false
         mipmap: true
@@ -158,6 +159,7 @@ Item {
         id: normalImage
 
         source: (root.visible && root.texturesLoaded) ? Qt.resolvedUrl("../images/earth_normal.png") : ""
+        cache: false
         visible: false
         asynchronous: false
         mipmap: true
@@ -174,14 +176,13 @@ Item {
         centerY: root.width * 0.5
         arcRadius: root.width * 0.560
 
-        text: root.formatLatitude(root.observerLatDeg)
-              + ", " + root.formatLongitude(root.observerLonDeg)
+        text: root.formatLatitude(root.observerLatDeg) + ", "
+              + root.formatLongitude(root.observerLonDeg)
               + "  \u2022  SOLAR " + root.formatSolarTime(root.localSolarTimeHours)
 
         color: Qt.rgba(0.86, 0.88, 0.92, 0.58)
-        fontFamily: Kirigami.Theme.defaultFont.family
         pixelSize: root.captionSize
-        fontWeight: Font.Light
-        letterSpacing: 1.0
+        fontWeight: Font.Normal
+        letterSpacing: 0.7
     }
 }

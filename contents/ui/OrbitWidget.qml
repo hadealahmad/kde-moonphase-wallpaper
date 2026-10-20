@@ -50,9 +50,6 @@ Item {
         width: root.width
         height: root.width
 
-        layer.enabled: true
-        layer.smooth: true
-
         property real earthHelioLonRad: root.earthHelioLonRad
         property real jan1HelioLonRad: root.jan1HelioLonRad
         property real yearProgress: root.yearProgress
@@ -81,28 +78,29 @@ Item {
             y: labelPoint.y - height * 0.5
 
             text: modelData.label
-            color: Qt.rgba(0.86, 0.88, 0.92, 0.48)
+            color: Qt.rgba(0.86, 0.88, 0.92, 0.50)
             font.family: Kirigami.Theme.defaultFont.family
             font.pixelSize: root.labelSize
-            font.letterSpacing: 0.8
+            font.weight: Font.Medium
+            font.letterSpacing: 0.9
+            renderType: Text.NativeRendering
         }
     }
 
-    // Jan 1 start/end marker label, placed inside the orbit ring so it never
-    // collides with the outer DEC label.
+    // Subtle Jan 1 reference marker just inside the ring.
     Text {
-        id: jan1Label
+        readonly property point jan1Point: root.labelPointAt(root.jan1HelioLonRad, 0.72)
 
-        readonly property point anchorPoint: root.labelPointAt(root.jan1HelioLonRad, 0.68)
-
-        x: anchorPoint.x - width * 0.5
-        y: anchorPoint.y - height * 0.5
+        x: jan1Point.x - width * 0.5
+        y: jan1Point.y - height * 0.5
 
         text: "JAN 1"
-        color: Qt.rgba(0.95, 0.89, 0.74, 0.72)
+        color: Qt.rgba(0.95, 0.80, 0.45, 0.50)
         font.family: Kirigami.Theme.defaultFont.family
-        font.pixelSize: Math.max(7, root.labelSize - 1)
+        font.pixelSize: Math.max(6, Math.round(root.labelSize * 0.82))
+        font.weight: Font.Normal
         font.letterSpacing: 0.6
+        renderType: Text.NativeRendering
     }
 
     CurvedText {
@@ -112,16 +110,15 @@ Item {
         visible: root.showTelemetry
         centerX: root.width * 0.5
         centerY: root.width * 0.5
-        arcRadius: root.width * 0.518
+        arcRadius: root.width * 0.465
 
         text: root.seasonName.toUpperCase()
               + "  \u2022  DAY " + root.dayOfYear + " / " + root.daysInYear
               + "  \u2022  " + (root.yearProgress * 100).toFixed(1) + "%"
 
         color: Qt.rgba(0.86, 0.88, 0.92, 0.58)
-        fontFamily: Kirigami.Theme.defaultFont.family
         pixelSize: root.captionSize
-        fontWeight: Font.Light
-        letterSpacing: 1.0
+        fontWeight: Font.Normal
+        letterSpacing: 0.7
     }
 }

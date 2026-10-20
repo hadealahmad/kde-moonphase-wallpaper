@@ -396,6 +396,7 @@ WallpaperItem {
             id: normalImage
 
             source: root.moonTexLoaded ? Qt.resolvedUrl("../images/moon_normal.png") : ""
+            cache: false
             visible: false
             asynchronous: false
             mipmap: true
