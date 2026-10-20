@@ -3,7 +3,7 @@
 
     SPDX-License-Identifier: GPL-2.0-or-later
 
-    Low-GPU seasonal background layer with FBO caching and throttled timer
+    Low-GPU seasonal background layer with smart FBO caching and throttled timer
     animation. Supports Concept 1 (Celestial Planisphere), Concept 3
     (Astrolabe & Seasonal Etchings), or Combined mode.
 */
@@ -45,7 +45,10 @@ Item {
         anchors.fill: parent
         visible: root.shaderActive
 
-        layer.enabled: root.shaderActive
+        // Only allocate a full-screen FBO when static (!root.animate). When
+        // animating, rendering directly to the backbuffer avoids allocating
+        // 15–33 MB of full-screen offscreen VRAM and saves a full-screen blit.
+        layer.enabled: root.shaderActive && !root.animate
         layer.smooth: true
         layer.textureSize: Qt.size(Math.max(1, Math.round(root.width * root.resolutionScale)),
                                    Math.max(1, Math.round(root.height * root.resolutionScale)))

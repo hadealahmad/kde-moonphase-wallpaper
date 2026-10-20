@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
-prepare_assets.py — build the Moon textures used by the KDE Plasma 6
-moon-phase wallpaper plugin.
+prepare_assets.py — build the channel-packed Moon texture used by the KDE
+Plasma 6 moon-phase wallpaper plugin.
 
 Inputs (NASA SVS "CGI Moon Kit", public domain):
   * LROC WAC color mosaic, simple cylindrical 2:1, near side centred.
   * LOLA global elevation (ldem_16), float32 kilometres, same projection.
 
-Outputs (checked in, exactly two files):
-  contents/images/moon_albedo.jpg   2048x1024 RGB, progressive JPEG
-  contents/images/moon_normal.png   2048x1024 RGB, tangent-space normal map
+Output (checked in, single channel-packed file):
+  contents/images/moon_normal.png   2048x1024 RGB, channel-packed:
+      R = tangent-space normal X (nx)
+      G = tangent-space normal Y (ny)
+      B = lunar surface albedo luminance (Rec.709 sRGB luma)
+  (normal Z is reconstructed analytically in moon.frag as sqrt(1 - nx^2 - ny^2))
 
 Projection contract shared with contents/shaders/moon.frag:
     u = 0.5 + atan2(N.x, N.z) / (2*PI)
@@ -504,17 +507,17 @@ def make_contact_sheet(albedo: np.ndarray, normal: np.ndarray, path: Path) -> No
         font = ImageFont.load_default()
         small = font
 
-    draw.rectangle((8, 8, 330, 40), fill=(0, 0, 0))
-    draw.text((14, 12), "moon_albedo.jpg  2048x1024", fill=(240, 240, 240), font=font)
-    draw.rectangle((1032, 8, 1400, 40), fill=(0, 0, 0))
-    draw.text((1038, 12), "moon_normal.png  2048x1024", fill=(240, 240, 240), font=font)
+    draw.rectangle((8, 8, 360, 40), fill=(0, 0, 0))
+    draw.text((14, 12), "albedo luma (B)  2048x1024", fill=(240, 240, 240), font=font)
+    draw.rectangle((1032, 8, 1460, 40), fill=(0, 0, 0))
+    draw.text((1038, 12), "moon_normal.png (RG+B)  2048x1024", fill=(240, 240, 240), font=font)
     for i, (lon, label) in enumerate(
         ((0, "near side 0 deg"), (90, "east limb 90 deg"),
          (180, "far side 180 deg"), (270, "west limb 270 deg"))
     ):
         draw.rectangle((i * 512 + 8, 520, i * 512 + 220, 546), fill=(0, 0, 0))
         draw.text((i * 512 + 14, 524), label, fill=(235, 235, 235), font=small)
-    draw.text((12, 1000), "NASA LRO/LROC CGI Moon Kit -> equirectangular tangent normal",
+    draw.text((12, 1000), "NASA LRO/LROC CGI Moon Kit -> equirectangular packed normal+albedo",
               fill=(170, 170, 170), font=small)
     sheet.save(path, "PNG", optimize=True)
 
@@ -568,7 +571,7 @@ def main() -> int:
             log("  WARNING: LOLA elevation unavailable -> procedural fallback")
 
     # ---- colour ----------------------------------------------------------
-    log("\n[2/4] albedo")
+    log("\n[2/4] albedo luminance")
     albedo_img = load_color(color_path)
     albedo_arr = np.asarray(albedo_img, dtype=np.uint8)
     if PRIME_MERIDIAN_SHIFT_PX:
@@ -576,15 +579,17 @@ def main() -> int:
         log(f"  rotated colour map by {PRIME_MERIDIAN_SHIFT_PX} px for prime meridian")
     raw_alb_seam = seam_metric(albedo_arr)
     albedo_arr = feather_horizontal_seam(albedo_arr)
-    albedo_img = Image.fromarray(albedo_arr, mode="RGB")
-
-    albedo_path = out_dir / "moon_albedo.jpg"
-    albedo_img.save(albedo_path, "JPEG", quality=88, optimize=True,
-                    progressive=True, subsampling=0)
-    log(f"  wrote {albedo_path.name}: {albedo_path.stat().st_size / 1e6:.2f} MB")
+    albedo_luma = np.clip(
+        np.round(
+            0.2126 * albedo_arr[..., 0].astype(np.float32)
+            + 0.7152 * albedo_arr[..., 1].astype(np.float32)
+            + 0.0722 * albedo_arr[..., 2].astype(np.float32)
+        ),
+        0, 255,
+    ).astype(np.uint8)
 
     # ---- elevation / normals --------------------------------------------
-    log("\n[3/4] normal map")
+    log("\n[3/4] channel-packed normal + albedo map")
     if elev_path is not None:
         elev_km = load_elevation(elev_path)
         source_note = f"NASA LOLA {elev_path.name} (float32 km)"
@@ -599,34 +604,30 @@ def main() -> int:
     log(f"  seam feather    : {SEAM_FEATHER_PX} px at u=0/1 (dateline)")
 
     normal_arr = normal_from_elevation(elev_km, strength=args.strength)
+    packed_arr = np.stack([normal_arr[..., 0], normal_arr[..., 1], albedo_luma], axis=-1)
     normal_path = out_dir / "moon_normal.png"
-    Image.fromarray(normal_arr, mode="RGB").save(normal_path, "PNG", optimize=True)
-    log(f"  wrote {normal_path.name}: {normal_path.stat().st_size / 1e6:.2f} MB")
+    Image.fromarray(packed_arr, mode="RGB").save(
+        normal_path, "PNG", optimize=True, compress_level=9
+    )
+    log(f"  wrote {normal_path.name} (R=nx, G=ny, B=albedo_luma): "
+        f"{normal_path.stat().st_size / 1e6:.2f} MB")
 
     # ---- verification ----------------------------------------------------
     log("\n[4/4] verification")
-    total_bytes = albedo_path.stat().st_size + normal_path.stat().st_size
-    a_im = Image.open(albedo_path)
+    total_bytes = normal_path.stat().st_size
     n_im = Image.open(normal_path)
-    log(f"  albedo : {a_im.width}x{a_im.height} {a_im.mode}  "
-        f"{albedo_path.stat().st_size / 1e6:.2f} MB")
-    log(f"  normal : {n_im.width}x{n_im.height} {n_im.mode}  "
+    log(f"  packed : {n_im.width}x{n_im.height} {n_im.mode}  "
         f"{normal_path.stat().st_size / 1e6:.2f} MB")
     log(f"  total  : {total_bytes / 1e6:.2f} MB  (limit 12 MB)")
 
-    assert a_im.width == 2 * a_im.height, "albedo is not 2:1"
     assert n_im.width == 2 * n_im.height, "normal map is not 2:1"
     assert total_bytes < 12 * 1024 * 1024, "textures exceed 12 MB"
 
-    alb_seam = seam_metric(np.asarray(Image.open(albedo_path).convert("RGB")))
     nrm_saved = np.asarray(Image.open(normal_path).convert("RGB"))
     nrm_seam = seam_metric(nrm_saved, trim_rows=2)
-    alb_neighbor = neighbor_metric(np.asarray(Image.open(albedo_path).convert("RGB")))
     nrm_neighbor = neighbor_metric(nrm_saved, trim_rows=2)
     log(f"  seam MAD (u=0 vs u=1), albedo source   : {raw_alb_seam:.2f} / 255")
-    log(f"  seam MAD (u=0 vs u=1), albedo JPEG     : {alb_seam:.2f} / 255"
-        f"  (neighbour MAD {alb_neighbor:.2f}, ratio {alb_seam / max(alb_neighbor, 1e-6):.2f})")
-    log(f"  seam MAD (u=0 vs u=1), normal PNG      : {nrm_seam:.2f} / 255"
+    log(f"  seam MAD (u=0 vs u=1), packed PNG      : {nrm_seam:.2f} / 255"
         f"  (neighbour MAD {nrm_neighbor:.2f}, ratio {nrm_seam / max(nrm_neighbor, 1e-6):.2f})")
     log("  (normal: 2 pole rows trimmed; a ratio <= 1 means the join is")
     log("   no sharper than an ordinary adjacent-column transition)")

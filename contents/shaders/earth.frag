@@ -15,8 +15,7 @@ layout(std140, binding = 0) uniform buf {
 } ubuf;
 
 layout(binding = 1) uniform sampler2D daySource;
-layout(binding = 2) uniform sampler2D nightSource;
-layout(binding = 3) uniform sampler2D normalSource;
+layout(binding = 2) uniform sampler2D normalSource;
 
 const float PI = 3.14159265358979323846;
 
@@ -54,11 +53,10 @@ void main() {
     vec2 uv = vec2(lon / (2.0 * PI) + 0.5, 0.5 - lat / PI);
 
     vec4 daySample = texture(daySource, uv);
-    vec3 nightSample = texture(nightSource, uv).rgb;
+    // normalSource packs tangent-space normal (R=nx, G=ny) + Black Marble city luminance (B)
+    vec3 normalSample = texture(normalSource, uv).rgb;
 
-    // Decode NASA GEBCO tangent-space normal map (same convention as moon.frag):
-    // +T = east (+lon), +B = north (+lat), +Nw = outward surface normal
-    vec3 tNormal = texture(normalSource, uv).xyz * 2.0 - 1.0;
+    vec2 tNormal = normalSample.xy * 2.0 - 1.0;
     vec3 T = vec3(-sin(lon), cos(lon), 0.0);
     vec3 B = cross(Nw, T);
     vec3 N = normalize(Nw + 1.35 * (tNormal.x * T + tNormal.y * B));
@@ -115,12 +113,11 @@ void main() {
     float twilight = exp(-pow(ndotlMacro / 0.09, 2.0)) * smoothstep(-0.14, 0.04, ndotlMacro);
     lit += vec3(0.16, 0.13, 0.10) * twilight * 0.16 * clamp(ubuf.atmosphereIntensity, 0.0, 1.5);
 
-    // Night side: faint earthshine + warm amber-ivory city lights
+    // Night side: faint earthshine + warm amber-ivory city lights decoded from normalSample.b
     float nightMask = 1.0 - smoothstep(-0.06, 0.08, ndotlMacro);
     vec3 nightFloor = baseAlbedo * 0.055 * vec3(0.76, 0.84, 1.0) * (0.45 + 0.55 * Nv.z);
 
-    vec3 cityLinear = pow(max(nightSample, vec3(0.0)), vec3(1.85));
-    float cityLuma = dot(cityLinear, vec3(0.299, 0.587, 0.114));
+    float cityLuma = pow(max(normalSample.b, 0.0), 1.85);
     vec3 cityColor = vec3(0.95, 0.85, 0.64) * cityLuma * max(ubuf.nightLightsBoost, 0.0) * 0.25;
     vec3 unlit = (nightFloor + cityColor * landMask) * nightMask;
 

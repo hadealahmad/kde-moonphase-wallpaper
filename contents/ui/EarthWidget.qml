@@ -4,7 +4,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 
     Bottom-right observer-centered day/night Earth globe with NASA GEBCO
-    topography + bathymetry normal relief.
+    topography + bathymetry normal relief and Render-and-Evict VRAM caching.
 */
 
 import QtQuick
@@ -24,13 +24,56 @@ Item {
     property bool showObserverPin: true
     property bool showTelemetry: true
 
+    // --- Render-and-Evict state ---------------------------------------------
+    // Keeps the source 1024x512 textures loaded only while rendering a frame,
+    // then locks earthCache (ShaderEffectSource) and evicts the source textures
+    // from RAM and VRAM during the 15-minute idle interval.
+    property bool texturesLoaded: true
+    property bool cacheLocked: false
+
     readonly property real observerLatRad: root.observerLatDeg * Math.PI / 180.0
     readonly property real observerLonRad: root.observerLonDeg * Math.PI / 180.0
-
     readonly property real captionSize: Math.max(7, Math.round(width * 0.040))
+    readonly property bool texturesReady: dayImage.status === Image.Ready
+                                          && normalImage.status === Image.Ready
 
     implicitWidth: 230
     implicitHeight: Math.round(width * 1.12)
+
+    function requestRender() {
+        if (!root.visible) {
+            return;
+        }
+        unloadTimer.stop();
+        root.texturesLoaded = true;
+        if (root.texturesReady) {
+            root.cacheLocked = false;
+            evictTimer.restart();
+        }
+    }
+
+    onSunVectorWorldChanged: root.requestRender()
+    onObserverLatDegChanged: root.requestRender()
+    onObserverLonDegChanged: root.requestRender()
+    onNightLightsBoostChanged: root.requestRender()
+    onAtmosphereIntensityChanged: root.requestRender()
+    onShowObserverPinChanged: root.requestRender()
+    onWidthChanged: root.requestRender()
+    onVisibleChanged: {
+        if (root.visible) {
+            root.requestRender();
+        } else {
+            evictTimer.stop();
+            unloadTimer.stop();
+            root.texturesLoaded = false;
+        }
+    }
+    onTexturesReadyChanged: {
+        if (root.texturesReady && root.visible) {
+            root.cacheLocked = false;
+            evictTimer.restart();
+        }
+    }
 
     function formatLatitude(degrees) {
         return Math.abs(degrees).toFixed(1) + "\u00b0" + (degrees >= 0 ? "N" : "S");
@@ -52,9 +95,7 @@ Item {
 
         width: root.width
         height: root.width
-
-        layer.enabled: true
-        layer.smooth: true
+        visible: false
 
         property vector3d sunVectorWorld: root.sunVectorWorld
         property real observerLatRad: root.observerLatRad
@@ -64,43 +105,64 @@ Item {
         property real showObserverPin: root.showObserverPin ? 1.0 : 0.0
 
         property variant daySource: dayImage
-        property variant nightSource: nightImage
         property variant normalSource: normalImage
 
         fragmentShader: Qt.resolvedUrl("../shaders/earth.frag.qsb")
     }
 
-    Image {
-        id: dayImage
+    ShaderEffectSource {
+        id: earthCache
 
-        source: Qt.resolvedUrl("../images/earth_day.png")
-        visible: false
-        asynchronous: false
-        mipmap: true
+        width: root.width
+        height: root.width
+        sourceItem: earthShader
+        hideSource: true
         smooth: true
-        sourceSize: Qt.size(2048, 1024)
+        live: !root.cacheLocked && root.texturesReady
+    }
+
+    Timer {
+        id: evictTimer
+        interval: 1500
+        repeat: false
+        onTriggered: {
+            if (root.texturesReady && root.width > 0) {
+                earthCache.scheduleUpdate();
+                root.cacheLocked = true;
+                unloadTimer.restart();
+            }
+        }
+    }
+
+    Timer {
+        id: unloadTimer
+        interval: 60
+        repeat: false
+        onTriggered: {
+            root.texturesLoaded = false;
+        }
     }
 
     Image {
-        id: nightImage
+        id: dayImage
 
-        source: Qt.resolvedUrl("../images/earth_night.jpg")
+        source: (root.visible && root.texturesLoaded) ? Qt.resolvedUrl("../images/earth_day.png") : ""
         visible: false
         asynchronous: false
         mipmap: true
         smooth: true
-        sourceSize: Qt.size(2048, 1024)
+        sourceSize: Qt.size(1024, 512)
     }
 
     Image {
         id: normalImage
 
-        source: Qt.resolvedUrl("../images/earth_normal.png")
+        source: (root.visible && root.texturesLoaded) ? Qt.resolvedUrl("../images/earth_normal.png") : ""
         visible: false
         asynchronous: false
         mipmap: true
         smooth: true
-        sourceSize: Qt.size(2048, 1024)
+        sourceSize: Qt.size(1024, 512)
     }
 
     CurvedText {
@@ -110,8 +172,6 @@ Item {
         visible: root.showTelemetry
         centerX: root.width * 0.5
         centerY: root.width * 0.5
-        // Earth disc radius in earth.frag is 0.50 * width; 0.560 * width places
-        // the curved telemetry arc cleanly outside the globe's circumference.
         arcRadius: root.width * 0.560
 
         text: root.formatLatitude(root.observerLatDeg)

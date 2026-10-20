@@ -13,8 +13,9 @@ A live, physically based astronomical desktop wallpaper for **KDE Plasma 6** (`o
 ![Center 3D Moon with Sharp Ticked Bezel & Curved Telemetry](docs/screenshots/closeup_moon.png)
 
 - **Jean Meeus Ephemeris (Ch. 47/48):** True lunar phase angle, illuminated fraction, synodic age, selenocentric sun direction, and **optical libration** in longitude and latitude (the Moon visibly wobbles across the month).
-- **LRO Elevation & Normal Mapping:** Uses `2048×1024` equirectangular lunar maps (`moon_albedo.jpg` and `moon_normal.png`) derived from NASA's Lunar Reconnaissance Orbiter (LRO) CGI Moon Kit (`ldem_16.tif` / `ldem_4.tif` + `lroc_color_poles_4k.tif` / `lroc_color_poles_2k.tif`).
+- **Channel-Packed LRO Elevation & Albedo (`moon_normal.png`):** Uses a single `2048×1024` channel-packed equirectangular map (`R = Normal X`, `G = Normal Y`, `B = Lunar Albedo Luminance`, with `Normal Z` reconstructed analytically in `moon.frag`) derived from NASA's Lunar Reconnaissance Orbiter (LRO) CGI Moon Kit (`ldem_16.tif` / `ldem_4.tif` + `lroc_color_poles_4k.tif` / `lroc_color_poles_2k.tif`).
 - **Hapke / Lommel-Seeliger + Lambert Regolith BRDF:** Soft solar terminator with realistic limb brightening, micro-shadowing across crater rims, and configurable **Earthshine** illuminating the night hemisphere.
+- **Render-and-Evict VRAM Caching:** Renders the Moon into a `ShaderEffectSource` FBO (`moonCache`), locks the snapshot, and evicts the `2048×1024` source texture from RAM and VRAM during the 15-minute idle interval between ephemeris updates.
 - **Invariant Centering & Curved Telemetry Arc (`CurvedText.qml`):** The lunar disc is locked to `anchors.centerIn: parent` so toggling captions never shifts the Moon. Its curved telemetry caption (`WANING GIBBOUS • 61.9% • DAY 9.0`) follows a circular bottom arc outside the `r = 0.265` ticked astrolabe bezel with an automatic radial-spoke keepout zone.
 
 ---
@@ -22,6 +23,7 @@ A live, physically based astronomical desktop wallpaper for **KDE Plasma 6** (`o
 ### Full-Screen Backdrop: Switchable Celestial Planisphere & Engraved Seasonal Etchings (`BackgroundWidget.qml` + `background.frag`)
 
 - **Razor-Sharp Screen-Space Anti-Aliased Geometry:** Uses `fwidth(r)` screen-space derivatives (`crispStroke`) for 1-pixel anti-aliased concentric coordinate rings, 72/120-tick lunar bezel graduation marks, and constellation lines with zero Gaussian blur.
+- **Smart FBO Caching:** Caches the full-screen backdrop in an offscreen FBO (`layer.enabled: root.shaderActive && !root.animate`) only when static, and renders directly to the scene graph without allocating a 15–33 MB full-screen FBO when animated.
 - **Mid-Vertical Constellation Placement:** Seasonal zodiac and major constellations (Orion, Cygnus, Cassiopeia, Leo) are scaled and positioned in the vertical mid-band (`y ∈ [0.36, 0.64]`) so they never collide with the corner instruments.
 - **Three User-Switchable Styles (`SeasonalBackgroundStyle`):**
 
@@ -47,11 +49,11 @@ A live, physically based astronomical desktop wallpaper for **KDE Plasma 6** (`o
 - **Live Heliocentric Progress & Curved Telemetry:** Swept golden arc from `Jan 1` counter-clockwise to the current day of the year, four hollow equinox/solstice station rings, a glowing active Earth reticle, and a curved bottom telemetry arc (`AUTUMN • DAY 292 / 365 • 79.7%`).
 
 #### Bottom-Right: Topographic & Bathymetric Observer-Centered Earth Globe (`EarthWidget.qml` + `earth.frag`)
-- **Lunar-Matched Lithographic Aesthetic:** Styled to match the Moon's muted monochrome/slate palette (`earth_day.png`, `earth_night.jpg`, and `earth_normal.png`).
-- **Real NASA GEBCO 08 Topography & Bathymetry Relief:**
-  - `earth_normal.png` (`2048×1024 RGB`) encodes tangent-space surface normals computed from merged land elevation (`gebco_08_rev_elev`) and ocean floor bathymetry (`gebco_08_rev_bath`).
-  - `earth_day.png` (`2048×1024 RGBA`) encodes muted land/ocean albedo in `RGB` and continuous bathymetric depth (`[0.58..1.00]`) + land elevation (`[0.20..0.48]`) in `Alpha`.
-- **Physically Based Day/Night Shading & Curved Telemetry:** Uses the same Lommel-Seeliger + Lambertian diffuse model as the Moon, casting relief shadows across mountain ranges (Himalayas, Andes) and mid-ocean ridges near the solar terminator, plus warm nocturnal city lights (`BlackMarble_2016`), polar ice caps, an observer reticle pin, and a curved telemetry arc (`30.0°N, 31.2°E • SOLAR 21:04`) seated cleanly outside the globe's circumference (`r = 0.560 * width`).
+- **Lunar-Matched Lithographic Aesthetic:** Styled to match the Moon's muted monochrome/slate palette using right-sized `1024×512` textures (`earth_day.png` and channel-packed `earth_normal.png`) with Render-and-Evict VRAM caching.
+- **Real NASA GEBCO 08 Topography, Bathymetry & Black Marble Relief:**
+  - `earth_normal.png` (`1024×512 RGB`) packs tangent-space surface normals (`RG`) computed from merged land elevation (`gebco_08_rev_elev`) and ocean floor bathymetry (`gebco_08_rev_bath`) together with nocturnal city-light luminance (`B`, `BlackMarble_2016`).
+  - `earth_day.png` (`1024×512 RGBA`) encodes muted land/ocean albedo in `RGB` and continuous bathymetric depth (`[0.58..1.00]`) + land elevation (`[0.20..0.48]`) in `Alpha`.
+- **Physically Based Day/Night Shading & Curved Telemetry:** Uses the same Lommel-Seeliger + Lambertian diffuse model as the Moon, casting relief shadows across mountain ranges (Himalayas, Andes) and mid-ocean ridges near the solar terminator, plus warm nocturnal city lights, polar ice caps, an observer reticle pin, and a curved telemetry arc (`30.0°N, 31.2°E • SOLAR 21:04`) seated cleanly outside the globe's circumference (`r = 0.560 * width`).
 
 #### Top-Right: Dual-Ring Analogue Prayer Times Astrolabe Clock (`PrayerClockWidget.qml` + `prayer_clock.frag` + `prayer.js`)
 - **Concentric 12-Hour Rings:**
@@ -110,11 +112,9 @@ kde-moonphase-wallpaper/
 │   ├── config/
 │   │   └── main.xml                     # KConfigXT schema for all user-configurable settings
 │   ├── images/
-│   │   ├── moon_albedo.jpg              # 2048×1024 RGB : NASA LRO lunar surface albedo map
-│   │   ├── moon_normal.png              # 2048×1024 RGBA: NASA LRO tangent-space normal map (RGB) + albedo (A)
-│   │   ├── earth_day.png                # 2048×1024 RGBA: Muted Earth albedo (RGB) + GEBCO depth/elev (A)
-│   │   ├── earth_night.jpg              # 2048×1024 RGB : NASA Black Marble nocturnal city lights
-│   │   └── earth_normal.png             # 2048×1024 RGB : NASA GEBCO topography + bathymetry normal map
+│   │   ├── moon_normal.png              # 2048×1024 RGB : Channel-packed NASA LRO normal (RG) + albedo luma (B)
+│   │   ├── earth_day.png                # 1024×512 RGBA : Muted Earth albedo (RGB) + GEBCO depth/elev (A)
+│   │   └── earth_normal.png             # 1024×512 RGB  : Channel-packed GEBCO normal (RG) + Black Marble lights (B)
 │   ├── shaders/
 │   │   ├── background.frag   (.qsb)     # Full-screen planisphere star chart & seasonal etchings shader
 │   │   ├── moon.frag         (.qsb)     # Center 3D Moon sphere shader (Lommel-Seeliger + LRO normals)
@@ -130,15 +130,15 @@ kde-moonphase-wallpaper/
 │       ├── EarthWidget.qml              # Bottom-right Earth globe ShaderEffect + curved telemetry
 │       └── PrayerClockWidget.qml        # Top-right prayer clock ShaderEffect + vector symbol Canvas
 ├── scripts/
-│   ├── prepare_assets.py                # Downloads & bakes NASA LRO Moon normal/albedo texture
-│   ├── prepare_earth_assets.py          # Downloads & bakes NASA BlueMarble/BlackMarble/GEBCO Earth maps
+│   ├── prepare_assets.py                # Downloads & bakes channel-packed NASA LRO Moon normal+albedo texture
+│   ├── prepare_earth_assets.py          # Downloads & bakes 1024×512 NASA BlueMarble/BlackMarble/GEBCO Earth maps
 │   └── earth_assets_provenance.txt      # SHA-256 provenance of all 5 NASA source datasets
 └── tests/
     ├── test_astronomy.mjs               # Node unit tests for lunar phase, libration, and syzygies (9 tests)
     ├── test_earth_orbit.mjs             # Node unit tests for solar declination, EoT, seasons (18 tests)
     ├── test_prayer.mjs                  # Node unit tests for prayer zenith math & AlAdhan parser (13 tests)
     ├── shader_smoke.qml                 # Headless OpenGL smoke test for all 5 shaders + procedural maps
-    ├── render_preview.qml               # Headless renderer for the 4 principal lunar phases
+    ├── preview.qml                      # Headless renderer for the 4 principal lunar phases
     └── render_full_wallpaper.qml        # Headless 1920×1080 renderer across all 4 seasons
 ```
 
@@ -161,9 +161,9 @@ graph TD
         API["prayer.js::fetchPrayerTimesAsync() -> AlAdhan REST API (1x/day)"]
     end
 
-    subgraph Widgets["Cached QtQuick Scene Graph Widgets (layer.enabled: true)"]
+    subgraph Widgets["Cached QtQuick Scene Graph Widgets (Render-and-Evict + Smart FBO)"]
         BG["BackgroundWidget.qml -> background.frag.qsb"]
-        MN["Center Moon ShaderEffect -> moon.frag.qsb + CurvedText.qml"]
+        MN["Center Moon ShaderEffectSource -> moon.frag.qsb + CurvedText.qml"]
         OR["OrbitWidget.qml (Bottom-Left) -> orbit.frag.qsb + CurvedText.qml"]
         EA["EarthWidget.qml (Bottom-Right) -> earth.frag.qsb + CurvedText.qml"]
         PC["PrayerClockWidget.qml (Top-Right) -> prayer_clock.frag.qsb + CurvedText.qml"]
@@ -233,12 +233,12 @@ make preview-full
 
 All scientific textures, elevation models, astronomical algorithms, and external services used in this wallpaper are credited below:
 
-### Lunar Surface & Elevation Maps (`moon_albedo.jpg`, `moon_normal.png`)
+### Lunar Surface & Elevation Map (`moon_normal.png`)
 - **Source:** [NASA Scientific Visualization Studio (SVS) — CGI Moon Kit (SVS #4720)](https://svs.gsfc.nasa.gov/4720)
 - **Credits:** Ernie Wright (USRA / NASA Goddard Space Flight Center), Lunar Reconnaissance Orbiter Camera (**LROC** Wide Angle Camera color mosaic, Arizona State University), and Lunar Orbiter Laser Altimeter (**LOLA** `ldem_16` / `ldem_4` global elevation model, NASA GSFC).
 - **License:** Public Domain (NASA Media Usage Guidelines).
 
-### Earth Surface, Topography, Bathymetry & Night Lights (`earth_day.png`, `earth_night.jpg`, `earth_normal.png`)
+### Earth Surface, Topography, Bathymetry & Night Lights (`earth_day.png`, `earth_normal.png`)
 Exact SHA-256 checksums and source URLs for all five upstream Earth datasets are recorded in [`scripts/earth_assets_provenance.txt`](scripts/earth_assets_provenance.txt):
 - **Blue Marble Next Generation (`land_shallow_topo_2048.tif`):** [NASA Visible Earth — Blue Marble: Land Surface, Shallow Water, and Shaded Topography](https://visibleearth.nasa.gov/images/57752/blue-marble-land-surface-shallow-water-and-shaded-topography) — Credit: Reto Stöckli, NASA Earth Observatory (Public Domain).
 - **Black Marble Nighttime Lights (`BlackMarble_2016_3km.jpg`):** [NASA Visible Earth — Earth at Night (Black Marble 2016)](https://visibleearth.nasa.gov/images/144898/earth-at-night-black-marble-2016-color-maps) — Credit: NASA Earth Observatory images by Joshua Stevens, using Suomi NPP VIIRS data from Miguel Román, NASA GSFC (Public Domain).

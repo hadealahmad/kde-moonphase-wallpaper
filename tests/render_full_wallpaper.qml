@@ -158,21 +158,12 @@ Window {
                 property real earthshine: 0.035
                 property real normalStrength: 1.2
                 property real rollAngleRad: 0.0
+                property real usePackedAlbedo: 1.0
 
-                property variant albedoSource: albedoImage
+                property variant albedoSource: normalImage
                 property variant normalSource: normalImage
 
                 fragmentShader: Qt.resolvedUrl("../contents/shaders/moon.frag.qsb")
-            }
-
-            Image {
-                id: albedoImage
-
-                source: Qt.resolvedUrl("../contents/images/moon_albedo.jpg")
-                visible: false
-                asynchronous: false
-                mipmap: true
-                smooth: true
             }
 
             Image {

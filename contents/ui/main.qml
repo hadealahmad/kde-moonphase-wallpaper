@@ -99,6 +99,31 @@ WallpaperItem {
             ? root.orbitState.observerSeasonIndex : 3;
     }
 
+    // --- Moon Render-and-Evict VRAM caching state ---------------------------
+    // Keeps moon_normal.png loaded only while rendering a frame, then locks
+    // moonCache (ShaderEffectSource) and unloads the 2048x1024 source texture
+    // from RAM and VRAM during the 15-minute idle interval.
+    property bool moonTexLoaded: true
+    property bool moonCacheLocked: false
+    readonly property bool moonTexReady: normalImage.status === Image.Ready
+
+    function requestMoonRender() {
+        moonUnloadTimer.stop();
+        root.moonTexLoaded = true;
+        if (root.moonTexReady) {
+            root.moonCacheLocked = false;
+            moonEvictTimer.restart();
+        }
+    }
+
+    onMoonTexReadyChanged: {
+        if (root.moonTexReady) {
+            root.moonCacheLocked = false;
+            moonEvictTimer.restart();
+        }
+    }
+    onMoonSizeChanged: root.requestMoonRender()
+
     // Scrubbing any of these settings recomputes the scene deterministically.
     onDebugActiveChanged: root.updateAstronomy()
     onDebugPhaseChanged: {
@@ -119,7 +144,7 @@ WallpaperItem {
     onObserverLatChanged: root.updateAstronomy()
     onObserverLonChanged: root.updateAstronomy()
 
-    // Recompute the prayer snapshot as soon as any related setting changes.
+    // Recompute the prayer snapshot or Moon render as soon as settings change.
     Connections {
         target: root.configuration
 
@@ -127,6 +152,9 @@ WallpaperItem {
         function onPrayerCalculationMethodChanged() { root.updateAstronomy(); }
         function onPrayerAsrSchoolChanged() { root.updateAstronomy(); }
         function onPrayerUseApiChanged() { root.updateAstronomy(); }
+        function onEarthshineIntensityChanged() { root.requestMoonRender(); }
+        function onCraterReliefStrengthChanged() { root.requestMoonRender(); }
+        function onSouthernHemisphereFlipChanged() { root.requestMoonRender(); }
     }
 
     // Synodic month, used only to nudge the ephemeris towards a manually
@@ -183,8 +211,6 @@ WallpaperItem {
         return new Date(start + (day - 1.0) * 86400000 + hour * 3600000);
     }
 
-    // Copy a prayer.js state object onto the root properties consumed by
-    // PrayerClockWidget. Missing or malformed states leave the last snapshot.
     function applyPrayerState(pState) {
         if (!pState) {
             return;
@@ -215,8 +241,6 @@ WallpaperItem {
         }
     }
 
-    // Offline recalculation only; the daily AlAdhan fetch happens once per
-    // updateAstronomy() call and is then served from prayer.js' cache.
     function refreshPrayerState() {
         let date = new Date();
         if (root.debugActive) {
@@ -230,10 +254,6 @@ WallpaperItem {
             const lat = root.observerLat;
             const lon = root.observerLon;
 
-            // Read the demo switch straight from the configuration: a derived
-            // binding can still be stale while the wallpaper is being
-            // constructed, and a fetch made in that window would cache live
-            // timings for the simulated date.
             const demoMode = root.configuration
                              && root.configuration.DebugTimeOverrideEnabled === true;
             let date = new Date();
@@ -247,11 +267,10 @@ WallpaperItem {
             } else {
                 root.moonState = Astronomy.getMoonState(date, lat, lon);
             }
+            root.requestMoonRender();
 
             root.orbitState = Astronomy.getEarthAndOrbitState(date, lat, lon);
 
-            // Synchronous offline snapshot first, so the dial is correct
-            // immediately; the API result replaces it when it arrives.
             root.applyPrayerState(root.prayerStateFor(date));
 
             if (!demoMode && root.prayerUseApi && root.showPrayerClockWidget) {
@@ -259,20 +278,16 @@ WallpaperItem {
                                              root.prayerCalculationMethod,
                                              root.prayerAsrSchool,
                                              function(apiState) {
-                    // A response can land after the preview was switched on.
                     if (!root.debugActive) {
                         root.applyPrayerState(apiState);
                     }
                 });
             }
         } catch (e) {
-            // Keep the last known-good scene rather than blanking the desktop.
             console.warn("moonphase: ephemeris failed:", e);
         }
     }
 
-    // Walk the ephemeris to the requested phase. Two refinement passes are
-    // enough to land within a few thousandths of a degree of the target.
     function stateForPhase(phase, baseMs, latitude, longitude) {
         const target = ((phase % 1.0) + 1.0) % 1.0;
         let timestamp = (baseMs === undefined) ? Date.now() : baseMs;
@@ -322,12 +337,7 @@ WallpaperItem {
             id: moonShader
 
             anchors.fill: parent
-
-            // Rendering the shader into an offscreen layer means Qt only
-            // re-runs the fragment shader when a uniform, the size or the
-            // textures change -- not on every desktop repaint.
-            layer.enabled: true
-            layer.smooth: true
+            visible: false
 
             property vector3d sunDirection: root.moonState.sunDirection
                                             ? Qt.vector3d(root.moonState.sunDirection.x,
@@ -341,30 +351,51 @@ WallpaperItem {
             property real rollAngleRad: root.configuration.SouthernHemisphereFlip
                                         ? Math.PI
                                         : 0.0
+            property real usePackedAlbedo: 1.0
 
-            // Image exposes a texture provider, so the decoded texture is
-            // passed straight to the shader (mipmaps included).
-            property variant albedoSource: albedoImage
+            // Single channel-packed texture (R=nx, G=ny, B=albedo luma).
+            property variant albedoSource: normalImage
             property variant normalSource: normalImage
 
             fragmentShader: Qt.resolvedUrl("../shaders/moon.frag.qsb")
         }
 
-        Image {
-            id: albedoImage
+        ShaderEffectSource {
+            id: moonCache
 
-            source: Qt.resolvedUrl("../images/moon_albedo.jpg")
-            visible: false
-            asynchronous: false
-            mipmap: true
+            anchors.fill: parent
+            sourceItem: moonShader
+            hideSource: true
             smooth: true
-            sourceSize: Qt.size(2048, 1024)
+            live: !root.moonCacheLocked && root.moonTexReady
+        }
+
+        Timer {
+            id: moonEvictTimer
+            interval: 1500
+            repeat: false
+            onTriggered: {
+                if (root.moonTexReady && moonContainer.width > 0) {
+                    moonCache.scheduleUpdate();
+                    root.moonCacheLocked = true;
+                    moonUnloadTimer.restart();
+                }
+            }
+        }
+
+        Timer {
+            id: moonUnloadTimer
+            interval: 60
+            repeat: false
+            onTriggered: {
+                root.moonTexLoaded = false;
+            }
         }
 
         Image {
             id: normalImage
 
-            source: Qt.resolvedUrl("../images/moon_normal.png")
+            source: root.moonTexLoaded ? Qt.resolvedUrl("../images/moon_normal.png") : ""
             visible: false
             asynchronous: false
             mipmap: true
@@ -380,8 +411,6 @@ WallpaperItem {
         visible: root.configuration.ShowTelemetryOverlay
         centerX: root.width * 0.5
         centerY: root.height * 0.5
-        // Sits cleanly outside the r = 0.258..0.278 ticked astrolabe circle
-        // (and outside the lunar disc if MoonScale is increased).
         arcRadius: Math.max(root.moonSize * 0.465, root.height * 0.298)
 
         text: root.moonState.phaseName.toUpperCase()
@@ -444,8 +473,6 @@ WallpaperItem {
         observerLatDeg: root.observerLat
         observerLonDeg: root.observerLon
         localSolarTimeHours: root.orbitState ? root.orbitState.localSolarTimeHours : 12.0
-        // The Black Marble source is deliberately very dark; at a 230 px
-        // thumbnail the city lights need a boost to read as more than noise.
         nightLightsBoost: 3.2
         showObserverPin: root.showObserverPin
         showTelemetry: root.configuration.ShowTelemetryOverlay
@@ -488,8 +515,6 @@ WallpaperItem {
         onTriggered: root.updateAstronomy()
     }
 
-    // Fast clock tick: keeps the analogue hands and the countdown in step
-    // without re-running the ephemeris or hitting the network.
     Timer {
         id: prayerClockTimer
 
