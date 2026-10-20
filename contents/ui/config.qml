@@ -37,6 +37,10 @@ Kirigami.FormLayout {
     property alias cfg_ShowSeasonalGhostEarths: seasonalGhostsCheck.checked
     property alias cfg_DebugDayOfYearOverride: debugDaySlider.value
     property alias cfg_DebugUTCHourOverride: debugUtcSlider.value
+    property alias cfg_SeasonalBackgroundMode: seasonalModeCombo.currentIndex
+    property alias cfg_SeasonalBackgroundAnimate: seasonalAnimateCheck.checked
+    property alias cfg_SeasonalBackgroundIntensity: seasonalIntensitySlider.value
+    property alias cfg_SeasonalBackgroundFps: seasonalFpsSpin.value
 
     readonly property bool debugEnabled: debugCheck.checked
 
@@ -177,6 +181,91 @@ Kirigami.FormLayout {
                                    "Background color value: %1",
                                    backgroundColorButton.color.toString().toUpperCase())
         }
+    }
+
+    QQC2.ComboBox {
+        id: seasonalModeCombo
+
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Seasonal background:")
+
+        // Index order must match the SeasonalBackgroundMode config entry:
+        // 0 = Auto, 1..4 = Spring..Winter, 5 = Off.
+        model: [
+            i18nd("plasma_wallpaper_org.kde.moonphase", "Automatic (Follow Season)"),
+            i18nd("plasma_wallpaper_org.kde.moonphase", "Spring (Blossoms)"),
+            i18nd("plasma_wallpaper_org.kde.moonphase", "Summer (Sparse Clouds)"),
+            i18nd("plasma_wallpaper_org.kde.moonphase", "Autumn (Falling Leaves)"),
+            i18nd("plasma_wallpaper_org.kde.moonphase", "Winter (Snow)"),
+            i18nd("plasma_wallpaper_org.kde.moonphase", "Off (Solid Color)")
+        ]
+
+        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Seasonal background")
+        Accessible.description: i18nd("plasma_wallpaper_org.kde.moonphase",
+                                      "Automatic follows the current season. Choose Off for a plain solid background.")
+    }
+
+    RowLayout {
+        Layout.fillWidth: true
+        spacing: Kirigami.Units.smallSpacing
+
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Background effect:")
+
+        QQC2.Slider {
+            id: seasonalIntensitySlider
+
+            Layout.fillWidth: true
+            Layout.minimumWidth: Kirigami.Units.gridUnit * 12
+
+            from: 0.10
+            to: 1.00
+            stepSize: 0.05
+            snapMode: QQC2.Slider.SnapAlways
+            enabled: seasonalModeCombo.currentIndex !== 5
+
+            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Background effect intensity")
+            Accessible.description: i18nd("plasma_wallpaper_org.kde.moonphase",
+                                          "Opacity and density of the seasonal texture. Current value: %1%",
+                                          Math.round(seasonalIntensitySlider.value * 100))
+        }
+
+        QQC2.Label {
+            Layout.minimumWidth: Kirigami.Units.gridUnit * 3
+            horizontalAlignment: Text.AlignRight
+            enabled: seasonalModeCombo.currentIndex !== 5
+            text: Math.round(seasonalIntensitySlider.value * 100) + "%"
+            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase",
+                                   "Background effect intensity: %1%",
+                                   Math.round(seasonalIntensitySlider.value * 100))
+        }
+    }
+
+    QQC2.CheckBox {
+        id: seasonalAnimateCheck
+
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Background motion:")
+        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Animate seasonal background (low GPU mode)")
+        enabled: seasonalModeCombo.currentIndex !== 5
+        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Animate seasonal background")
+        Accessible.description: i18nd("plasma_wallpaper_org.kde.moonphase",
+                                      "Draw a slowly moving texture. Disable to keep a static seasonal pattern.")
+    }
+
+    QQC2.SpinBox {
+        id: seasonalFpsSpin
+
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Animation frame rate (FPS):")
+
+        from: 5
+        to: 30
+        stepSize: 5
+        editable: true
+        enabled: seasonalModeCombo.currentIndex !== 5 && seasonalAnimateCheck.checked
+        // Deliberately no value binding: cfg_SeasonalBackgroundFps aliases this
+        // property, and Plasma supplies the stored value when it loads the page.
+
+        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Seasonal background animation frame rate")
+        Accessible.description: i18nd("plasma_wallpaper_org.kde.moonphase",
+                                      "How often the seasonal texture is redrawn, from 5 to 30 frames per second.")
     }
 
     RowLayout {

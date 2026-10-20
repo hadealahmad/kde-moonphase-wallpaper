@@ -548,6 +548,21 @@ function oppositeSeason(name) {
     return "Summer";
 }
 
+/* Season names map to a stable 0..3 index (Spring, Summer, Autumn, Winter).
+   Unknown input defaults to Winter so callers always get a usable index. */
+function seasonIndexFromName(name) {
+    if (name === "Spring") {
+        return 0;
+    }
+    if (name === "Summer") {
+        return 1;
+    }
+    if (name === "Autumn") {
+        return 2;
+    }
+    return 3;
+}
+
 /*
  * Public entry point.
  *
@@ -617,6 +632,10 @@ function getEarthAndOrbitState(date, latitude, longitude) {
     var seasonNameN = seasonNameNorth(sun.lambdaRad);
     var seasonNameS = oppositeSeason(seasonNameN);
 
+    /* Observer-facing season: the southern hemisphere sees the opposite. */
+    var observerSeasonName = (latitude < 0) ? seasonNameS : seasonNameN;
+    var observerSeasonIndex = seasonIndexFromName(observerSeasonName);
+
     /* --- Subsolar point ---
        Hour angle H = GMST - alpha (at Greenwich). The subsolar meridian is
        where H = 0, so its east-positive longitude is -H. */
@@ -657,6 +676,8 @@ function getEarthAndOrbitState(date, latitude, longitude) {
         daysInYear: daysInYear,
         seasonNameNorth: seasonNameN,
         seasonNameSouth: seasonNameS,
+        observerSeasonName: observerSeasonName,
+        observerSeasonIndex: observerSeasonIndex,
         earthDistanceAU: sun.distance,
         observerLatRad: latitude * RAD,
         observerLonRad: longitude * RAD,

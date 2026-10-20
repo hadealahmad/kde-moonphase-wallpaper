@@ -175,6 +175,17 @@ test("returns every contract field with finite values and valid ranges", () => {
     );
 
     assert(
+        names.includes(s.observerSeasonName),
+        `bad observerSeasonName: ${s.observerSeasonName}`
+    );
+    assert(
+        Number.isInteger(s.observerSeasonIndex) &&
+            s.observerSeasonIndex >= 0 &&
+            s.observerSeasonIndex <= 3,
+        `observerSeasonIndex out of 0..3: ${s.observerSeasonIndex}`
+    );
+
+    assert(
         s.sunVectorWorld && typeof s.sunVectorWorld === "object",
         "sunVectorWorld missing"
     );
@@ -291,6 +302,98 @@ test("season names on the four 2026 equinox/solstice dates", () => {
             `${c.date.toISOString()}: south season ${s.seasonNameSouth}, ` +
                 `expected ${c.south}`
         );
+    }
+});
+
+/* ---- 10b. hemisphere-aware observer season ---- */
+test("observer season follows latitude one day after each 2026 anchor", () => {
+    /* +1 day keeps every sample clear of the quadrant boundaries. */
+    const cases = [
+        {
+            date: utc(2026, 3, 21, 14, 46),
+            north: "Spring",
+            northIndex: 0,
+            south: "Autumn",
+            southIndex: 2
+        },
+        {
+            date: utc(2026, 6, 22, 8, 25),
+            north: "Summer",
+            northIndex: 1,
+            south: "Winter",
+            southIndex: 3
+        },
+        {
+            date: utc(2026, 9, 24, 0, 5),
+            north: "Autumn",
+            northIndex: 2,
+            south: "Spring",
+            southIndex: 0
+        },
+        {
+            date: utc(2026, 12, 22, 20, 50),
+            north: "Winter",
+            northIndex: 3,
+            south: "Summer",
+            southIndex: 1
+        }
+    ];
+
+    for (const c of cases) {
+        const label = c.date.toISOString();
+
+        const north = state(c.date, 30);
+        assert(
+            north.observerSeasonName === c.north,
+            `${label} lat 30: observerSeasonName ${north.observerSeasonName}, ` +
+                `expected ${c.north}`
+        );
+        assert(
+            north.observerSeasonIndex === c.northIndex,
+            `${label} lat 30: observerSeasonIndex ${north.observerSeasonIndex}, ` +
+                `expected ${c.northIndex}`
+        );
+
+        const south = state(c.date, -30);
+        assert(
+            south.observerSeasonName === c.south,
+            `${label} lat -30: observerSeasonName ${south.observerSeasonName}, ` +
+                `expected ${c.south}`
+        );
+        assert(
+            south.observerSeasonIndex === c.southIndex,
+            `${label} lat -30: observerSeasonIndex ${south.observerSeasonIndex}, ` +
+                `expected ${c.southIndex}`
+        );
+
+        assert(
+            north.observerSeasonName === north.seasonNameNorth,
+            `${label} lat 30: observer season must match the northern season`
+        );
+        assert(
+            south.observerSeasonName === south.seasonNameSouth,
+            `${label} lat -30: observer season must match the southern season`
+        );
+    }
+});
+
+test("observerSeasonIndex is consistent with observerSeasonName everywhere", () => {
+    const expected = { Spring: 0, Summer: 1, Autumn: 2, Winter: 3 };
+    const dates = [
+        utc(2026, 1, 15, 12),
+        utc(2026, 4, 15, 12),
+        utc(2026, 7, 15, 12),
+        utc(2026, 10, 15, 12)
+    ];
+    for (const date of dates) {
+        for (const lat of [-90, -45, -0.1, 0, 0.1, 45, 90]) {
+            const s = state(date, lat);
+            assert(
+                s.observerSeasonIndex === expected[s.observerSeasonName],
+                `${date.toISOString()} lat ${lat}: ` +
+                    `${s.observerSeasonName} -> ${s.observerSeasonIndex}`
+            );
+        }
     }
 });
 
