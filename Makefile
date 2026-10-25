@@ -52,6 +52,7 @@ preview-full: shader
 test:
 	node tests/test_astronomy.mjs
 	node tests/test_earth_orbit.mjs
+	node tests/test_hijri.mjs
 	node tests/test_prayer.mjs
 
 clean:

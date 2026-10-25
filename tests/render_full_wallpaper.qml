@@ -16,6 +16,7 @@ import QtQuick.Window
 import "../contents/ui"
 import "../contents/ui" as UI
 import "../contents/code/astronomy.js" as Astronomy
+import "../contents/code/hijri.js" as Hijri
 import "../contents/code/prayer.js" as Prayer
 
 Window {
@@ -61,6 +62,7 @@ Window {
 
     property var moonState: null
     property var orbitState: null
+    property var hijriDate: null
     property string checkpointName: ""
     property int checkpointIndex: 0
 
@@ -73,6 +75,7 @@ Window {
         window.orbitState = Astronomy.getEarthAndOrbitState(checkpoint.date,
                                                             window.observerLat,
                                                             window.observerLon);
+        window.hijriDate = Hijri.getHijriDate(checkpoint.date);
 
         const prayerState = Prayer.getPrayerState(checkpoint.date,
                                                   window.observerLat,
@@ -186,7 +189,26 @@ Window {
             text: window.moonState
                   ? (window.moonState.phaseName.toUpperCase()
                      + "  \u2022  " + (window.moonState.illumination * 100).toFixed(1) + "%"
-                     + "  \u2022  DAY " + window.moonState.ageDays.toFixed(1))
+                     + "  \u2022  DAY " + window.moonState.ageDays.toFixed(1)
+                     + "  \u2022  " + window.hijriDate.weekdayName
+                     + " " + window.hijriDate.day)
+                  : ""
+
+            color: Qt.rgba(0.86, 0.88, 0.92, 0.58)
+            pixelSize: Math.max(9, Math.round(moonContainer.width * 0.026))
+            fontWeight: Font.Light
+            letterSpacing: Math.max(1.2, moonContainer.width * 0.004)
+        }
+
+        CurvedText {
+            anchors.fill: parent
+            centerX: scene.width * 0.5
+            centerY: scene.height * 0.5
+            arcRadius: Math.max(moonContainer.width * 0.465, scene.height * 0.298)
+            arcSide: "top"
+
+            text: window.hijriDate
+                  ? window.hijriDate.monthName + " " + window.hijriDate.year + " هـ"
                   : ""
 
             color: Qt.rgba(0.86, 0.88, 0.92, 0.58)

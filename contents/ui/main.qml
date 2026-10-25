@@ -10,6 +10,7 @@ import org.kde.kirigami as Kirigami
 import org.kde.plasma.plasmoid
 
 import "../code/astronomy.js" as Astronomy
+import "../code/hijri.js" as Hijri
 import "../code/prayer.js" as Prayer
 
 WallpaperItem {
@@ -178,6 +179,16 @@ WallpaperItem {
 
     property var orbitState: null
 
+    // Hijri (Umm al-Qura) snapshot for the curved date labels around the Moon.
+    // Refreshed together with the ephemeris so the day rolls over at midnight.
+    property var hijriDate: Hijri.getHijriDate(new Date())
+    readonly property string hijriDayLabel: root.hijriDate
+        ? root.hijriDate.weekdayName + " " + root.hijriDate.day
+        : ""
+    readonly property string hijriMonthYearLabel: root.hijriDate
+        ? root.hijriDate.monthName + " " + root.hijriDate.year + " هـ"
+        : ""
+
     // Prayer clock snapshot, refreshed by updateAstronomy() and by the
     // 30-second clock timer below.
     property real prayerLocalTimeHours: 12.0
@@ -270,6 +281,8 @@ WallpaperItem {
             root.requestMoonRender();
 
             root.orbitState = Astronomy.getEarthAndOrbitState(date, lat, lon);
+
+            root.hijriDate = Hijri.getHijriDate(date);
 
             root.applyPrayerState(root.prayerStateFor(date));
 
@@ -417,6 +430,30 @@ WallpaperItem {
         text: root.moonState.phaseName.toUpperCase()
               + "  \u2022  " + (root.moonState.illumination * 100).toFixed(1) + "%"
               + "  \u2022  DAY " + root.moonState.ageDays.toFixed(1)
+              + "  \u2022  " + root.hijriDayLabel
+
+        color: root.telemetryColor
+        fontFamily: Kirigami.Theme.defaultFont.family
+        pixelSize: Math.max(9, Math.round(root.moonSize * 0.026))
+        fontWeight: Font.Light
+        letterSpacing: Math.max(1.2, root.moonSize * 0.004)
+        textStyle: Text.Raised
+        styleColor: root.backgroundLuminance > 0.5
+                    ? Qt.rgba(1.0, 1.0, 1.0, 0.15)
+                    : Qt.rgba(0.0, 0.0, 0.0, 0.25)
+    }
+
+    CurvedText {
+        id: hijriHeader
+
+        anchors.fill: parent
+        visible: root.configuration.ShowTelemetryOverlay
+        centerX: root.width * 0.5
+        centerY: root.height * 0.5
+        arcRadius: Math.max(root.moonSize * 0.465, root.height * 0.298)
+        arcSide: "top"
+
+        text: root.hijriMonthYearLabel
 
         color: root.telemetryColor
         fontFamily: Kirigami.Theme.defaultFont.family

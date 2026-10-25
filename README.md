@@ -16,7 +16,7 @@ A live, physically based astronomical desktop wallpaper for **KDE Plasma 6** (`o
 - **Channel-Packed LRO Elevation & Albedo (`moon_normal.png`):** Uses a single `2048×1024` channel-packed equirectangular map (`R = Normal X`, `G = Normal Y`, `B = Lunar Albedo Luminance`, with `Normal Z` reconstructed analytically in `moon.frag`) derived from NASA's Lunar Reconnaissance Orbiter (LRO) CGI Moon Kit (`ldem_16.tif` / `ldem_4.tif` + `lroc_color_poles_4k.tif` / `lroc_color_poles_2k.tif`).
 - **Hapke / Lommel-Seeliger + Lambert Regolith BRDF:** Soft solar terminator with realistic limb brightening, micro-shadowing across crater rims, and configurable **Earthshine** illuminating the night hemisphere.
 - **Render-and-Evict VRAM Caching:** Renders the Moon into a `ShaderEffectSource` FBO (`moonCache`), locks the snapshot, and evicts the `2048×1024` source texture from RAM and VRAM during the 15-minute idle interval between ephemeris updates.
-- **Invariant Centering & Curved Telemetry Arc (`CurvedText.qml`):** The lunar disc is locked to `anchors.centerIn: parent` so toggling captions never shifts the Moon. Its curved telemetry caption (`WANING GIBBOUS • 61.9% • DAY 9.0`) follows a circular bottom arc outside the `r = 0.265` ticked astrolabe bezel with an automatic radial-spoke keepout zone.
+- **Invariant Centering & Curved Hijri Telemetry Arcs (`CurvedText.qml` + `hijri.js`):** The lunar disc is locked to `anchors.centerIn: parent` so toggling captions never shifts the Moon. Its lower curved caption blends the live lunar state with the Arabic Hijri date (`WANING GIBBOUS • 61.9% • DAY 9.0 • الأحد 14`), while a mirrored top arc carries the Hijri month and year (`جمادى الأولى 1448 هـ`). Arabic words are shaped as whole items and laid out in bidi-aware visual order instead of being split per glyph, so the script stays connected and legible around the curve. The Umm al-Qura calendar table covers 1356–1500 AH with a tabular fallback outside that range.
 
 ---
 
@@ -108,6 +108,7 @@ kde-moonphase-wallpaper/
 ├── contents/
 │   ├── code/
 │   │   ├── astronomy.js                 # .pragma library: Meeus lunar & heliocentric Earth ephemeris
+│   │   ├── hijri.js                     # .pragma library: Umm al-Qura Hijri conversion + Arabic labels
 │   │   └── prayer.js                    # .pragma library: Solar-zenith prayer calculator + AlAdhan API cache
 │   ├── config/
 │   │   └── main.xml                     # KConfigXT schema for all user-configurable settings
@@ -124,7 +125,7 @@ kde-moonphase-wallpaper/
 │   └── ui/
 │       ├── main.qml                     # Root WallpaperItem: timers, ephemeris wiring, center Moon
 │       ├── config.qml                   # Redesigned 5-section Kirigami.FormLayout settings UI
-│       ├── CurvedText.qml               # Reusable proportional-glyph circular arc telemetry component
+│       ├── CurvedText.qml               # Reusable bidi-aware circular arc telemetry (top/bottom, Latin + Arabic)
 │       ├── BackgroundWidget.qml         # Full-screen seasonal background ShaderEffect wrapper
 │       ├── OrbitWidget.qml              # Bottom-left astrolabe orbit ShaderEffect + curved telemetry
 │       ├── EarthWidget.qml              # Bottom-right Earth globe ShaderEffect + curved telemetry
@@ -136,6 +137,7 @@ kde-moonphase-wallpaper/
 └── tests/
     ├── test_astronomy.mjs               # Node unit tests for lunar phase, libration, and syzygies (9 tests)
     ├── test_earth_orbit.mjs             # Node unit tests for solar declination, EoT, seasons (18 tests)
+    ├── test_hijri.mjs                   # Node unit tests for Umm al-Qura conversion & Arabic labels (14 tests)
     ├── test_prayer.mjs                  # Node unit tests for prayer zenith math & AlAdhan parser (13 tests)
     ├── shader_smoke.qml                 # Headless OpenGL smoke test for all 5 shaders + procedural maps
     ├── preview.qml                      # Headless renderer for the 4 principal lunar phases
@@ -157,13 +159,14 @@ graph TD
     subgraph Ephemeris["Pure ES5 Ephemeris Engines"]
         AST["astronomy.js::getMoonState(date, lat, lon)"]
         ORB["astronomy.js::getEarthAndOrbitState(date, lat, lon)"]
+        HIJ["hijri.js::getHijriDate(date) -> Umm al-Qura + Arabic labels"]
         PRY["prayer.js::getPrayerState(date, lat, lon, method, school)"]
         API["prayer.js::fetchPrayerTimesAsync() -> AlAdhan REST API (1x/day)"]
     end
 
     subgraph Widgets["Cached QtQuick Scene Graph Widgets (Render-and-Evict + Smart FBO)"]
         BG["BackgroundWidget.qml -> background.frag.qsb"]
-        MN["Center Moon ShaderEffectSource -> moon.frag.qsb + CurvedText.qml"]
+        MN["Center Moon ShaderEffectSource -> moon.frag.qsb + CurvedText.qml (top & bottom arcs)"]
         OR["OrbitWidget.qml (Bottom-Left) -> orbit.frag.qsb + CurvedText.qml"]
         EA["EarthWidget.qml (Bottom-Right) -> earth.frag.qsb + CurvedText.qml"]
         PC["PrayerClockWidget.qml (Top-Right) -> prayer_clock.frag.qsb + CurvedText.qml"]
@@ -171,6 +174,7 @@ graph TD
 
     T15 --> AST
     T15 --> ORB
+    T15 --> HIJ
     T15 --> PRY
     T30 --> PRY
     CFG --> AST
@@ -181,6 +185,7 @@ graph TD
     AST --> BG
     ORB --> BG
     AST --> MN
+    HIJ --> MN
     ORB --> OR
     ORB --> EA
     PRY --> PC
@@ -245,8 +250,9 @@ Exact SHA-256 checksums and source URLs for all five upstream Earth datasets are
 - **Global Land Topography (`gebco_08_rev_elev_21600x10800.png`):** [NASA Visible Earth — Topography](https://visibleearth.nasa.gov/images/73934/topography) — Credit: Jesse Allen, NASA Earth Observatory, using data from the **General Bathymetric Chart of the Oceans (GEBCO)** produced by the British Oceanographic Data Centre (Public Domain).
 - **Global Ocean Bathymetry (`gebco_08_rev_bath_21600x10800.png`):** [NASA Visible Earth — Bathymetry](https://visibleearth.nasa.gov/images/73963/bathymetry) — Credit: Jesse Allen, NASA Earth Observatory, using **GEBCO_08** global relief data (Public Domain).
 
-### Astronomical & Mathematical References (`astronomy.js`, `prayer.js`)
+### Astronomical & Mathematical References (`astronomy.js`, `hijri.js`, `prayer.js`)
 - **Lunar & Solar Ephemeris (`contents/code/astronomy.js`):** Implemented from **Jean Meeus**, *Astronomical Algorithms* (2nd Edition, Willmann-Bell, 1998) — Chapters 22, 25, 47, 48, and 53 (solar coordinates, equation of time, lunar position, phase angle, illuminated fraction, and optical libration in longitude and latitude).
+- **Hijri Calendar (`contents/code/hijri.js`):** Gregorian conversion follows Meeus chapter 7 (Julian Day numbers). The month-length table is the **Umm al-Qura** calendar (1356–1500 AH) adopted by the King Abdulaziz City for Science and Technology (KACST), as distributed with the MIT-licensed [moment-hijri](https://github.com/xsoh/moment-hijri) library by Suhail Alkowaileet. Dates outside the table fall back to the tabular (Kuwaiti) Islamic calendar. Anchor dates verified against the AlAdhan `gToH` conversion service.
 - **Prayer Time Solar-Zenith Equations & Live API (`contents/code/prayer.js`):**
   - Live daily timings (when enabled) are fetched from the free, open [**AlAdhan Prayer Times REST API**](https://aladhan.com/prayer-times-api) by [Islamic Network](https://islamic.network/).
   - Offline solar-zenith calculation uses standard astronomical twilight/shadow formulas across MWL, ISNA, Umm al-Qura, Egyptian General Authority, Diyanet, Karachi, and Tehran conventions.
