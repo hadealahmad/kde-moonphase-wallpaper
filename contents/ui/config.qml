@@ -55,7 +55,7 @@ Kirigami.FormLayout {
 
     // Curated world cities for one-click coordinate & hemisphere setup.
     readonly property var cityPresets: [
-        { name: i18nd("plasma_wallpaper_org.kde.moonphase", "Custom Coordinates"), lat: null, lon: null },
+        { name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Custom Coordinates"), lat: null, lon: null },
         { name: "Makkah (21.4\u00b0N, 39.8\u00b0E)",       lat: 21.4,  lon: 39.8 },
         { name: "Madinah (24.5\u00b0N, 39.6\u00b0E)",      lat: 24.5,  lon: 39.6 },
         { name: "Cairo (30.0\u00b0N, 31.2\u00b0E)",        lat: 30.0,  lon: 31.2 },
@@ -102,27 +102,27 @@ Kirigami.FormLayout {
     function phaseName(phase) {
         const p = normalizedPhase(phase);
         if (p < 1 / 16 || p >= 15 / 16) {
-            return i18nd("plasma_wallpaper_org.kde.moonphase", "New Moon");
+            return i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "New Moon");
         } else if (p < 3 / 16) {
-            return i18nd("plasma_wallpaper_org.kde.moonphase", "Waxing Crescent");
+            return i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Waxing Crescent");
         } else if (p < 5 / 16) {
-            return i18nd("plasma_wallpaper_org.kde.moonphase", "First Quarter");
+            return i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "First Quarter");
         } else if (p < 7 / 16) {
-            return i18nd("plasma_wallpaper_org.kde.moonphase", "Waxing Gibbous");
+            return i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Waxing Gibbous");
         } else if (p < 9 / 16) {
-            return i18nd("plasma_wallpaper_org.kde.moonphase", "Full Moon");
+            return i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Full Moon");
         } else if (p < 11 / 16) {
-            return i18nd("plasma_wallpaper_org.kde.moonphase", "Waning Gibbous");
+            return i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Waning Gibbous");
         } else if (p < 13 / 16) {
-            return i18nd("plasma_wallpaper_org.kde.moonphase", "Last Quarter");
+            return i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Last Quarter");
         }
-        return i18nd("plasma_wallpaper_org.kde.moonphase", "Waning Crescent");
+        return i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Waning Crescent");
     }
 
     function dayOfYearLabel(day) {
         const date = new Date(2025, 0, 1);
         date.setDate(Math.max(1, Math.min(365, Math.round(day))));
-        return i18nd("plasma_wallpaper_org.kde.moonphase",
+        return i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase",
                      "%1 (%2)",
                      Qt.formatDate(date, "MMM d"),
                      seasonName(day));
@@ -133,20 +133,20 @@ Kirigami.FormLayout {
         const south = observerLatitudeSpin.value < 0;
         if (d >= 79 && d < 172) {
             return south
-                ? i18nd("plasma_wallpaper_org.kde.moonphase", "Autumn")
-                : i18nd("plasma_wallpaper_org.kde.moonphase", "Spring");
+                ? i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Autumn")
+                : i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Spring");
         } else if (d >= 172 && d < 266) {
             return south
-                ? i18nd("plasma_wallpaper_org.kde.moonphase", "Winter")
-                : i18nd("plasma_wallpaper_org.kde.moonphase", "Summer");
+                ? i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Winter")
+                : i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Summer");
         } else if (d >= 266 && d < 355) {
             return south
-                ? i18nd("plasma_wallpaper_org.kde.moonphase", "Spring")
-                : i18nd("plasma_wallpaper_org.kde.moonphase", "Autumn");
+                ? i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Spring")
+                : i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Autumn");
         }
         return south
-            ? i18nd("plasma_wallpaper_org.kde.moonphase", "Summer")
-            : i18nd("plasma_wallpaper_org.kde.moonphase", "Winter");
+            ? i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Summer")
+            : i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Winter");
     }
 
     function formatHourMin(hours) {
@@ -159,7 +159,7 @@ Kirigami.FormLayout {
 
     function formatTimeWithLocal(utcHours) {
         const localSolarHours = utcHours + observerLongitudeSpin.value / 15.0;
-        return i18nd("plasma_wallpaper_org.kde.moonphase",
+        return i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase",
                      "%1 Local \u00b7 %2 UTC",
                      formatHourMin(localSolarHours),
                      formatHourMin(utcHours));
@@ -180,14 +180,14 @@ Kirigami.FormLayout {
     // =========================================================================
     Kirigami.Heading {
         level: 4
-        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Your Location")
+        text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Your Location")
         Kirigami.FormData.isSection: true
     }
 
     QQC2.ComboBox {
         id: cityPresetCombo
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "City preset:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "City preset:")
         Layout.fillWidth: true
 
         model: root.cityPresets
@@ -204,8 +204,8 @@ Kirigami.FormLayout {
             }
         }
 
-        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "City location preset")
-        Accessible.description: i18nd("plasma_wallpaper_org.kde.moonphase",
+        Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "City location preset")
+        Accessible.description: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase",
                                       "Select a city to fill in latitude, longitude, and hemisphere orientation automatically.")
     }
 
@@ -213,10 +213,10 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Coordinates:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Coordinates:")
 
         QQC2.Label {
-            text: i18nd("plasma_wallpaper_org.kde.moonphase", "Lat:")
+            text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Lat:")
             opacity: 0.75
         }
 
@@ -239,11 +239,11 @@ Kirigami.FormLayout {
                 southernFlipCheck.checked = (value < 0);
             }
 
-            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Observer latitude")
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Observer latitude")
         }
 
         QQC2.Label {
-            text: i18nd("plasma_wallpaper_org.kde.moonphase", "Lon:")
+            text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Lon:")
             opacity: 0.75
             Layout.leftMargin: Kirigami.Units.smallSpacing
         }
@@ -264,16 +264,16 @@ Kirigami.FormLayout {
                 return root.coordinateValue(text);
             }
 
-            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Observer longitude")
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Observer longitude")
         }
     }
 
     QQC2.CheckBox {
         id: southernFlipCheck
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Moon orientation:")
-        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Southern Hemisphere view (flip lunar disc)")
-        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Southern hemisphere flip")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Moon orientation:")
+        text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Southern Hemisphere view (flip lunar disc)")
+        Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Southern hemisphere flip")
     }
 
     // =========================================================================
@@ -281,7 +281,7 @@ Kirigami.FormLayout {
     // =========================================================================
     Kirigami.Heading {
         level: 4
-        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Center Moon & Labels")
+        text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Center Moon & Labels")
         Kirigami.FormData.isSection: true
     }
 
@@ -289,7 +289,7 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Moon size:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Moon size:")
 
         QQC2.Slider {
             id: moonScaleSlider
@@ -302,7 +302,7 @@ Kirigami.FormLayout {
             stepSize: 0.01
             snapMode: QQC2.Slider.SnapAlways
 
-            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Moon size")
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Moon size")
         }
 
         QQC2.Label {
@@ -316,7 +316,7 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Crater depth:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Crater depth:")
 
         QQC2.Slider {
             id: craterReliefSlider
@@ -329,7 +329,7 @@ Kirigami.FormLayout {
             stepSize: 0.05
             snapMode: QQC2.Slider.SnapAlways
 
-            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Crater depth")
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Crater depth")
         }
 
         QQC2.Label {
@@ -344,7 +344,7 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Dark-side glow:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Dark-side glow:")
 
         QQC2.Slider {
             id: earthshineSlider
@@ -357,7 +357,7 @@ Kirigami.FormLayout {
             stepSize: 0.005
             snapMode: QQC2.Slider.SnapAlways
 
-            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Dark-side earthshine glow")
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Dark-side earthshine glow")
         }
 
         QQC2.Label {
@@ -370,9 +370,9 @@ Kirigami.FormLayout {
     QQC2.CheckBox {
         id: telemetryCheck
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Info captions:")
-        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Show curved text captions around Moon and active widgets")
-        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Show curved info captions")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Info captions:")
+        text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Show curved text captions around Moon and active widgets")
+        Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Show curved info captions")
     }
 
     // =========================================================================
@@ -380,7 +380,7 @@ Kirigami.FormLayout {
     // =========================================================================
     Kirigami.Heading {
         level: 4
-        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Background & Star Chart")
+        text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Background & Star Chart")
         Kirigami.FormData.isSection: true
     }
 
@@ -389,14 +389,14 @@ Kirigami.FormLayout {
     QQC2.ComboBox {
         id: unifiedBackgroundStyleCombo
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Background style:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Background style:")
         Layout.fillWidth: true
 
         model: [
-            i18nd("plasma_wallpaper_org.kde.moonphase", "Star Chart (Planisphere & Constellations)"),
-            i18nd("plasma_wallpaper_org.kde.moonphase", "Seasonal Wireframe Etchings (Astrolabe)"),
-            i18nd("plasma_wallpaper_org.kde.moonphase", "Combined (Star Chart + Seasonal Etchings)"),
-            i18nd("plasma_wallpaper_org.kde.moonphase", "Solid Color Only (Off)")
+            i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Star Chart (Planisphere & Constellations)"),
+            i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Seasonal Wireframe Etchings (Astrolabe)"),
+            i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Combined (Star Chart + Seasonal Etchings)"),
+            i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Solid Color Only (Off)")
         ]
 
         currentIndex: {
@@ -417,22 +417,22 @@ Kirigami.FormLayout {
             }
         }
 
-        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Background style")
+        Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Background style")
     }
 
     QQC2.ComboBox {
         id: seasonalModeCombo
 
         visible: root.backgroundEnabled
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Season theme:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Season theme:")
         Layout.fillWidth: true
 
         model: [
-            i18nd("plasma_wallpaper_org.kde.moonphase", "Automatic (Follow Current Season)"),
-            i18nd("plasma_wallpaper_org.kde.moonphase", "Spring"),
-            i18nd("plasma_wallpaper_org.kde.moonphase", "Summer"),
-            i18nd("plasma_wallpaper_org.kde.moonphase", "Autumn"),
-            i18nd("plasma_wallpaper_org.kde.moonphase", "Winter")
+            i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Automatic (Follow Current Season)"),
+            i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Spring"),
+            i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Summer"),
+            i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Autumn"),
+            i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Winter")
         ]
 
         currentIndex: (root.cfg_SeasonalBackgroundMode >= 0 && root.cfg_SeasonalBackgroundMode <= 4)
@@ -442,7 +442,7 @@ Kirigami.FormLayout {
             root.cfg_SeasonalBackgroundMode = index;
         }
 
-        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Season theme")
+        Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Season theme")
     }
 
     RowLayout {
@@ -450,7 +450,7 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Line brightness:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Line brightness:")
 
         QQC2.Slider {
             id: seasonalIntensitySlider
@@ -463,7 +463,7 @@ Kirigami.FormLayout {
             stepSize: 0.05
             snapMode: QQC2.Slider.SnapAlways
 
-            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Background line brightness")
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Background line brightness")
         }
 
         QQC2.Label {
@@ -478,12 +478,12 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Gentle motion:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Gentle motion:")
 
         QQC2.CheckBox {
             id: seasonalAnimateCheck
-            text: i18nd("plasma_wallpaper_org.kde.moonphase", "Slowly drift background pattern")
-            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Animate seasonal background")
+            text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Slowly drift background pattern")
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Animate seasonal background")
         }
 
         QQC2.SpinBox {
@@ -493,12 +493,12 @@ Kirigami.FormLayout {
             to: 30
             stepSize: 5
             editable: true
-            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Animation frame rate")
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Animation frame rate")
         }
 
         QQC2.Label {
             visible: seasonalAnimateCheck.checked
-            text: i18nd("plasma_wallpaper_org.kde.moonphase", "FPS")
+            text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "FPS")
             opacity: 0.7
         }
     }
@@ -507,13 +507,13 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Base color:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Base color:")
 
         KQuickControls.ColorButton {
             id: backgroundColorButton
-            dialogTitle: i18nd("plasma_wallpaper_org.kde.moonphase", "Select Background Color")
+            dialogTitle: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Select Background Color")
             showAlphaChannel: false
-            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Background color")
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Background color")
         }
 
         QQC2.Label {
@@ -528,7 +528,7 @@ Kirigami.FormLayout {
     // =========================================================================
     Kirigami.Heading {
         level: 4
-        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Corner Instruments")
+        text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Corner Instruments")
         Kirigami.FormData.isSection: true
     }
 
@@ -536,28 +536,28 @@ Kirigami.FormLayout {
     QQC2.CheckBox {
         id: prayerClockCheck
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Top-right:")
-        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Prayer Times Analogue Clock (dual 12-hour rings)")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Top-right:")
+        text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Prayer Times Analogue Clock (dual 12-hour rings)")
         checked: root.cfg_ShowPrayerClockWidget
         onCheckedChanged: root.cfg_ShowPrayerClockWidget = checked
-        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Show prayer times clock widget")
+        Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Show prayer times clock widget")
     }
 
     QQC2.ComboBox {
         id: prayerMethodCombo
 
         visible: root.cfg_ShowPrayerClockWidget
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "    Calculation authority:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "    Calculation authority:")
         Layout.fillWidth: true
 
         model: [
-            { label: i18nd("plasma_wallpaper_org.kde.moonphase", "Muslim World League (MWL)"), methodId: 3 },
-            { label: i18nd("plasma_wallpaper_org.kde.moonphase", "Umm al-Qura (Makkah)"), methodId: 4 },
-            { label: i18nd("plasma_wallpaper_org.kde.moonphase", "Egyptian General Authority"), methodId: 5 },
-            { label: i18nd("plasma_wallpaper_org.kde.moonphase", "ISNA (North America)"), methodId: 2 },
-            { label: i18nd("plasma_wallpaper_org.kde.moonphase", "Diyanet (Turkey)"), methodId: 13 },
-            { label: i18nd("plasma_wallpaper_org.kde.moonphase", "University of Islamic Sciences, Karachi"), methodId: 1 },
-            { label: i18nd("plasma_wallpaper_org.kde.moonphase", "University of Tehran"), methodId: 7 }
+            { label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Muslim World League (MWL)"), methodId: 3 },
+            { label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Umm al-Qura (Makkah)"), methodId: 4 },
+            { label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Egyptian General Authority"), methodId: 5 },
+            { label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "ISNA (North America)"), methodId: 2 },
+            { label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Diyanet (Turkey)"), methodId: 13 },
+            { label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "University of Islamic Sciences, Karachi"), methodId: 1 },
+            { label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "University of Tehran"), methodId: 7 }
         ]
         textRole: "label"
         valueRole: "methodId"
@@ -568,25 +568,25 @@ Kirigami.FormLayout {
         }
         onActivated: root.cfg_PrayerCalculationMethod = prayerMethodCombo.currentValue
 
-        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Prayer calculation method")
+        Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Prayer calculation method")
     }
 
     QQC2.ComboBox {
         id: prayerAsrCombo
 
         visible: root.cfg_ShowPrayerClockWidget
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "    Asr juristic school:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "    Asr juristic school:")
         Layout.fillWidth: true
 
         model: [
-            i18nd("plasma_wallpaper_org.kde.moonphase", "Standard (Shafi'i, Maliki, Hanbali)"),
-            i18nd("plasma_wallpaper_org.kde.moonphase", "Hanafi")
+            i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Standard (Shafi'i, Maliki, Hanbali)"),
+            i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Hanafi")
         ]
 
         currentIndex: root.cfg_PrayerAsrSchool
         onActivated: root.cfg_PrayerAsrSchool = prayerAsrCombo.currentIndex
 
-        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Asr juristic method")
+        Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Asr juristic method")
     }
 
     QQC2.CheckBox {
@@ -594,19 +594,19 @@ Kirigami.FormLayout {
 
         visible: root.cfg_ShowPrayerClockWidget
         Kirigami.FormData.label: ""
-        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Sync daily prayer timings via AlAdhan API (automatic offline fallback)")
+        text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Sync daily prayer timings via AlAdhan API (automatic offline fallback)")
         checked: root.cfg_PrayerUseApi
         onCheckedChanged: root.cfg_PrayerUseApi = checked
-        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Fetch prayer times from AlAdhan")
+        Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Fetch prayer times from AlAdhan")
     }
 
     // --- 4B. Bottom-Left: Solar Orbit & Seasons ------------------------------
     QQC2.CheckBox {
         id: orbitWidgetCheck
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Bottom-left:")
-        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Solar Orbit & Seasons Astrolabe")
-        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Show orbit and seasons widget")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Bottom-left:")
+        text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Solar Orbit & Seasons Astrolabe")
+        Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Show orbit and seasons widget")
     }
 
     QQC2.CheckBox {
@@ -614,17 +614,17 @@ Kirigami.FormLayout {
 
         visible: orbitWidgetCheck.checked
         Kirigami.FormData.label: ""
-        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Show equinox & solstice markers along the orbit")
-        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Show seasonal cardinal markers")
+        text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Show equinox & solstice markers along the orbit")
+        Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Show seasonal cardinal markers")
     }
 
     // --- 4C. Bottom-Right: Topographic Earth Globe ---------------------------
     QQC2.CheckBox {
         id: earthWidgetCheck
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Bottom-right:")
-        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Topographic Day/Night Earth Globe")
-        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Show Earth globe widget")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Bottom-right:")
+        text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Topographic Day/Night Earth Globe")
+        Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Show Earth globe widget")
     }
 
     QQC2.CheckBox {
@@ -632,8 +632,8 @@ Kirigami.FormLayout {
 
         visible: earthWidgetCheck.checked
         Kirigami.FormData.label: ""
-        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Show my location pin on the Earth globe")
-        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Show observer location pin")
+        text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Show my location pin on the Earth globe")
+        Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Show observer location pin")
     }
 
     // --- 4D. Shared Corner Sizing (hidden if all 3 widgets are off) ----------
@@ -642,7 +642,7 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Instrument size:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Instrument size:")
 
         QQC2.Slider {
             id: cornerSizeSlider
@@ -655,7 +655,7 @@ Kirigami.FormLayout {
             stepSize: 10
             snapMode: QQC2.Slider.SnapAlways
 
-            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Corner instrument size")
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Corner instrument size")
         }
 
         QQC2.Label {
@@ -670,7 +670,7 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Edge margin:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Edge margin:")
 
         QQC2.Slider {
             id: cornerMarginSlider
@@ -683,7 +683,7 @@ Kirigami.FormLayout {
             stepSize: 4
             snapMode: QQC2.Slider.SnapAlways
 
-            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Corner screen margin")
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Corner screen margin")
         }
 
         QQC2.Label {
@@ -698,16 +698,16 @@ Kirigami.FormLayout {
     // =========================================================================
     Kirigami.Heading {
         level: 4
-        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Time-Travel Sandbox & Advanced")
+        text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Time-Travel Sandbox & Advanced")
         Kirigami.FormData.isSection: true
     }
 
     QQC2.CheckBox {
         id: debugCheck
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Simulation mode:")
-        text: i18nd("plasma_wallpaper_org.kde.moonphase", "Simulate custom date, time & moon phase")
-        Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Simulate custom date, time and moon phase")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Simulation mode:")
+        text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Simulate custom date, time & moon phase")
+        Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Simulate custom date, time and moon phase")
     }
 
     Kirigami.InlineMessage {
@@ -715,11 +715,11 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         Kirigami.FormData.isSection: true
         type: Kirigami.MessageType.Warning
-        text: i18nd("plasma_wallpaper_org.kde.moonphase",
+        text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase",
                     "Simulation mode is active \u2014 live clock and real-time updates are paused.")
         actions: [
             Kirigami.Action {
-                text: i18nd("plasma_wallpaper_org.kde.moonphase", "Return to Live Time")
+                text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Return to Live Time")
                 onTriggered: debugCheck.checked = false
             }
         ]
@@ -730,7 +730,7 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Moon phase:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Moon phase:")
 
         QQC2.Slider {
             id: debugPhaseSlider
@@ -743,13 +743,13 @@ Kirigami.FormLayout {
             stepSize: 0.005
             snapMode: QQC2.Slider.SnapAlways
 
-            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Manual moon phase")
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Manual moon phase")
         }
 
         QQC2.Label {
             Layout.minimumWidth: Kirigami.Units.gridUnit * 10
             horizontalAlignment: Text.AlignRight
-            text: i18nd("plasma_wallpaper_org.kde.moonphase",
+            text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase",
                         "%1 (%2%)",
                         root.phaseName(debugPhaseSlider.value),
                         Math.round(root.illuminationFraction(debugPhaseSlider.value) * 100))
@@ -761,7 +761,7 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Date & season:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Date & season:")
 
         QQC2.Slider {
             id: debugDaySlider
@@ -774,7 +774,7 @@ Kirigami.FormLayout {
             stepSize: 1.0
             snapMode: QQC2.Slider.SnapAlways
 
-            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Preview day of year")
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Preview day of year")
         }
 
         QQC2.Label {
@@ -789,7 +789,7 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Time of day:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Time of day:")
 
         QQC2.Slider {
             id: debugUtcSlider
@@ -802,7 +802,7 @@ Kirigami.FormLayout {
             stepSize: 0.25
             snapMode: QQC2.Slider.SnapAlways
 
-            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Preview time of day")
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Preview time of day")
         }
 
         QQC2.Label {
@@ -816,7 +816,7 @@ Kirigami.FormLayout {
         Layout.fillWidth: true
         spacing: Kirigami.Units.smallSpacing
 
-        Kirigami.FormData.label: i18nd("plasma_wallpaper_org.kde.moonphase", "Ephemeris refresh:")
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Ephemeris refresh:")
 
         QQC2.SpinBox {
             id: updateIntervalSpin
@@ -826,11 +826,11 @@ Kirigami.FormLayout {
             stepSize: 5
             editable: true
 
-            Accessible.name: i18nd("plasma_wallpaper_org.kde.moonphase", "Update interval in minutes")
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Update interval in minutes")
         }
 
         QQC2.Label {
-            text: i18nd("plasma_wallpaper_org.kde.moonphase", "minutes")
+            text: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "minutes")
             opacity: 0.7
         }
     }

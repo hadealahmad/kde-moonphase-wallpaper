@@ -1,6 +1,6 @@
 # Moon Phase & Celestial Astrolabe Wallpaper for KDE Plasma 6
 
-A live, physically based astronomical desktop wallpaper for **KDE Plasma 6** (`org.kde.plasma.moonphase`). It combines a real-time Jean Meeus lunar and solar ephemeris engine with five custom GLSL 440 fragment shaders and NASA elevation/bathymetry datasets to turn the desktop into a cohesive celestial observatory.
+A live, physically based astronomical desktop wallpaper for **KDE Plasma 6** (`io.github.hadealahmad.moonphase`). It combines a real-time Jean Meeus lunar and solar ephemeris engine with five custom GLSL 440 fragment shaders and NASA elevation/bathymetry datasets to turn the desktop into a cohesive celestial observatory.
 
 ![Moon Phase & Celestial Astrolabe Wallpaper — 2K Full Overview](docs/screenshots/hero_combined_2k.png)
 
@@ -100,8 +100,9 @@ A live, physically based astronomical desktop wallpaper for **KDE Plasma 6** (`o
 
 ```text
 kde-moonphase-wallpaper/
-├── metadata.json                        # KDE Plasma 6 KPackage manifest (org.kde.plasma.moonphase)
-├── Makefile                             # Shader baking (qsb), unit tests, headless previews, install
+├── metadata.json                        # KDE Plasma 6 KPackage manifest (io.github.hadealahmad.moonphase)
+├── LICENSE                              # GPL-2.0 license text
+├── Makefile                             # Shader baking (qsb), unit tests, headless previews, install, package
 ├── README.md                            # Architecture & usage documentation
 ├── docs/
 │   └── screenshots/                     # 2K (2560×1440) showcase screenshots & instrument close-ups
@@ -216,20 +217,35 @@ graph TD
 ## 5. Installation, Live Reload & Development Commands
 
 ```bash
-# Install or upgrade the wallpaper into ~/.local/share/plasma/wallpapers/org.kde.plasma.moonphase
+# Install or upgrade the wallpaper into ~/.local/share/plasma/wallpapers/io.github.hadealahmad.moonphase
 make install
 
 # Recompile all 5 GLSL 440 shaders into .qsb packages
 make shader
 
-# Run all 40 unit tests (lunar ephemeris + heliocentric orbit + prayer times)
+# Run all 54 unit tests (ephemeris + orbit + Hijri + prayer times)
 make test
+
+# Build the KDE Store upload archive in build/
+make package
 
 # Run headless OpenGL smoke test across all 5 shaders
 make smoke
 
 # Render 4 full 1920x1080 seasonal desktop previews into /tmp/opencode/full_wallpaper/
 make preview-full
+```
+
+### Publishing to the KDE Store
+
+`make package` produces `build/io.github.hadealahmad.moonphase-1.0.0.tar.gz`, which contains the KPackage root (`metadata.json`), the license, and the prebuilt `contents/` tree. Upload that file to a **Plasma 6 → Wallpaper Plugins** product on [store.kde.org](https://store.kde.org/product/add); the category is what System Settings → *Wallpaper* → *Get New Wallpapers…* downloads from. Use `GPL-2.0-or-later` as the store license and link the repository as the source code.
+
+Always test the generated archive before uploading:
+
+```bash
+rm -rf /tmp/wp-test
+XDG_DATA_HOME=/tmp/wp-test kpackagetool6 --type Plasma/Wallpaper \
+  --install build/io.github.hadealahmad.moonphase-1.0.0.tar.gz
 ```
 
 ---
@@ -261,4 +277,4 @@ Exact SHA-256 checksums and source URLs for all five upstream Earth datasets are
 
 ## License
 
-Source code and shaders are licensed under **GPL-2.0-or-later** (`SPDX-License-Identifier: GPL-2.0-or-later`). NASA LRO, Blue Marble, Black Marble, and GEBCO imagery products are in the public domain under [NASA Media Usage Guidelines](https://www.nasa.gov/nasa-brand-center/images-and-media/).
+Source code and shaders are licensed under **GPL-2.0-or-later** (`SPDX-License-Identifier: GPL-2.0-or-later`); the full license text is in [`LICENSE`](LICENSE). NASA LRO, Blue Marble, Black Marble, and GEBCO imagery products are in the public domain under [NASA Media Usage Guidelines](https://www.nasa.gov/nasa-brand-center/images-and-media/).

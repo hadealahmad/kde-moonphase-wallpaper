@@ -14,7 +14,18 @@ QSB_OUTS   := $(FRAGS:.frag=.frag.qsb)
 # GLSL versions are visible in the build log.
 QSB_FLAGS := --glsl "100 es,120,150" --hlsl 50 --msl 12
 
-.PHONY: all shader install clean smoke preview preview-full test
+# KDE Store artifact: the KPackage root (metadata, license, contents), with
+# the prebuilt .qsb shader packs, so users never need qsb installed.
+PACKAGE_ID      := io.github.hadealahmad.moonphase
+PACKAGE_VERSION := $(shell sed -n 's/^[[:space:]]*"Version": "\([^"]*\)".*/\1/p' metadata.json | head -n 1)
+PACKAGE_DIR     := build/package
+PACKAGE_TARBALL := build/$(PACKAGE_ID)-$(PACKAGE_VERSION).tar.gz
+
+ifeq ($(strip $(PACKAGE_VERSION)),)
+$(error Could not read KPlugin.Version from metadata.json)
+endif
+
+.PHONY: all shader install package package-test clean smoke preview preview-full test
 
 all: shader
 
@@ -23,11 +34,26 @@ shader: $(QSB_OUTS)
 %.frag.qsb: %.frag
 	$(QSB) $(QSB_FLAGS) -o $@ $<
 
-# Install into the user's Plasma wallpaper package directory.  Use
+# Install the same clean archive that is uploaded to the KDE Store.  Use
 # --upgrade when the package is already installed.
-install: shader
-	kpackagetool6 --type Plasma/Wallpaper --install . || \
-	kpackagetool6 --type Plasma/Wallpaper --upgrade .
+install: package
+	kpackagetool6 --type Plasma/Wallpaper --install $(PACKAGE_TARBALL) || \
+	kpackagetool6 --type Plasma/Wallpaper --upgrade $(PACKAGE_TARBALL)
+
+# Build the archive for a KDE Store "Plasma 6 Wallpaper Plugins" product.
+package: shader
+	rm -rf $(PACKAGE_DIR)
+	mkdir -p $(PACKAGE_DIR)
+	cp metadata.json LICENSE $(PACKAGE_DIR)/
+	cp -a contents $(PACKAGE_DIR)/
+	tar -C $(PACKAGE_DIR) -czf $(PACKAGE_TARBALL) metadata.json LICENSE contents
+	@echo "KDE Store package: $(PACKAGE_TARBALL)"
+
+# Install the generated archive into a throwaway prefix, exactly like KNewStuff.
+package-test: package
+	rm -rf build/test-data
+	XDG_DATA_HOME="$(CURDIR)/build/test-data" \
+		kpackagetool6 --type Plasma/Wallpaper --install $(PACKAGE_TARBALL)
 
 # Visual smoke test (optional; needs a GL context).
 # Note: QT_QPA_PLATFORM=offscreen cannot create a GL context here and yields
@@ -57,3 +83,4 @@ test:
 
 clean:
 	rm -f $(QSB_OUTS)
+	rm -rf build

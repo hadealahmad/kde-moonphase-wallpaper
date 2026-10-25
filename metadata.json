@@ -9,15 +9,16 @@
         ],
         "Category": "Wallpaper",
         "Description": "A physically based, live rendering of the Moon's current phase on your desktop",
-        "EnabledByDefault": true,
         "Icon": "preferences-desktop-wallpaper",
-        "Id": "org.kde.plasma.moonphase",
-        "License": "GPL-2.0+",
+        "Id": "io.github.hadealahmad.moonphase",
+        "License": "GPL-2.0-or-later",
         "Name": "Moon Phase",
         "ServiceTypes": [
             "Plasma/Wallpaper"
         ],
-        "Version": "1.0.0"
+        "Version": "1.0.0",
+        "Website": "https://github.com/hadealahmad/kde-moonphase-wallpaper",
+        "BugReportUrl": "https://github.com/hadealahmad/kde-moonphase-wallpaper/issues"
     },
     "X-KDE-ParentApp": "org.kde.plasmashell",
     "X-Plasma-MainScript": "ui/main.qml"
