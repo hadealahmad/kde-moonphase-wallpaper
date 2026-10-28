@@ -490,11 +490,12 @@ def render_sphere(albedo: np.ndarray, normal: np.ndarray, size: int,
     return rgb
 
 
-def make_contact_sheet(albedo: np.ndarray, normal: np.ndarray, path: Path) -> None:
-    """Write a 2048x1024 verification sheet: albedo, normal, 4 sphere views."""
+def make_contact_sheet(albedo: np.ndarray, normal: np.ndarray,
+                       packed: np.ndarray, path: Path) -> None:
+    """Write a 2048x1024 verification sheet: albedo, packed texture, spheres."""
     sheet = Image.new("RGB", (2048, 1024), (16, 16, 18))
     sheet.paste(Image.fromarray(albedo), (0, 0))
-    sheet.paste(Image.fromarray(normal), (1024, 0))
+    sheet.paste(Image.fromarray(packed), (1024, 0))
     for i, lon in enumerate((0.0, 90.0, 180.0, 270.0)):
         sphere = render_sphere(albedo, normal, 512, lon_offset_deg=lon)
         sheet.paste(Image.fromarray(sphere), (i * 512, 512))
@@ -507,10 +508,11 @@ def make_contact_sheet(albedo: np.ndarray, normal: np.ndarray, path: Path) -> No
         font = ImageFont.load_default()
         small = font
 
-    draw.rectangle((8, 8, 360, 40), fill=(0, 0, 0))
-    draw.text((14, 12), "albedo luma (B)  2048x1024", fill=(240, 240, 240), font=font)
-    draw.rectangle((1032, 8, 1460, 40), fill=(0, 0, 0))
-    draw.text((1038, 12), "moon_normal.png (RG+B)  2048x1024", fill=(240, 240, 240), font=font)
+    draw.rectangle((8, 8, 430, 40), fill=(0, 0, 0))
+    draw.text((14, 12), "albedo (colour source)  2048x1024", fill=(240, 240, 240), font=font)
+    draw.rectangle((1032, 8, 1560, 40), fill=(0, 0, 0))
+    draw.text((1038, 12), "moon_normal.png (R=nx G=ny B=luma)",
+              fill=(240, 240, 240), font=font)
     for i, (lon, label) in enumerate(
         ((0, "near side 0 deg"), (90, "east limb 90 deg"),
          (180, "far side 180 deg"), (270, "west limb 270 deg"))
@@ -633,10 +635,18 @@ def main() -> int:
     log("   no sharper than an ordinary adjacent-column transition)")
     log("  prime meridian: NASA simple-cylindrical registration, 0 deg at u=0.5")
     log("                  (no roll applied; Imbrium u~0.456, Crisium u~0.664)")
+    luma = nrm_saved[..., 2].astype(np.float32)
+    near_band = luma[:, int(0.35 * luma.shape[1]):int(0.65 * luma.shape[1])].mean()
+    far_band = np.concatenate(
+        [luma[:, :int(0.15 * luma.shape[1])],
+         luma[:, int(0.85 * luma.shape[1]):]], axis=1
+    ).mean()
+    log(f"  near/far albedo ratio: {near_band / far_band:.2f} "
+        f"(< 1 because the near-side maria are darker)")
 
     if not args.contact_sheet.parent.exists():
         args.contact_sheet.parent.mkdir(parents=True, exist_ok=True)
-    make_contact_sheet(albedo_arr, normal_arr, args.contact_sheet)
+    make_contact_sheet(albedo_arr, normal_arr, packed_arr, args.contact_sheet)
     log(f"  contact sheet: {args.contact_sheet}")
 
     log("\nDone.")
