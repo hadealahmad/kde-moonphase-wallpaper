@@ -2,6 +2,12 @@
 
 A live, physically based astronomical desktop wallpaper for **KDE Plasma 6** (`io.github.hadealahmad.moonphase`). It combines a real-time Jean Meeus lunar and solar ephemeris engine with five custom GLSL 440 fragment shaders and NASA elevation/bathymetry datasets to turn the desktop into a cohesive celestial observatory.
 
+[![KDE Store](https://img.shields.io/badge/KDE%20Store-Moon%20Phase-1d99f3)](https://store.kde.org/p/2380437/)
+[![License: GPL-2.0-or-later](https://img.shields.io/badge/License-GPL--2.0--or--later-blue)](LICENSE)
+
+**Install from the KDE Store:** [Moon Phase & Celestial Astrolabe — store.kde.org/p/2380437](https://store.kde.org/p/2380437/)
+**Source code & issues:** [github.com/hadealahmad/kde-moonphase-wallpaper](https://github.com/hadealahmad/kde-moonphase-wallpaper)
+
 ![Moon Phase & Celestial Astrolabe Wallpaper — 2K Full Overview](docs/screenshots/hero_combined_2k.png)
 
 ---
@@ -216,6 +222,12 @@ graph TD
 
 ## 5. Installation, Live Reload & Development Commands
 
+### Install from the KDE Store (recommended)
+
+Open **System Settings → Wallpaper**, click **Get New Wallpapers…**, search for *Moon Phase* (or open the [product page](https://store.kde.org/p/2380437/) and click *Install*), then select the wallpaper. Upgrades arrive through the same dialog.
+
+### Install from source
+
 ```bash
 # Install or upgrade the wallpaper into ~/.local/share/plasma/wallpapers/io.github.hadealahmad.moonphase
 make install
@@ -238,7 +250,9 @@ make preview-full
 
 ### Publishing to the KDE Store
 
-`make package` produces `build/io.github.hadealahmad.moonphase-1.0.0.tar.gz`, which contains the KPackage root (`metadata.json`), the license, and the prebuilt `contents/` tree. Upload that file to a **Plasma 6 → Wallpaper Plugins** product on [store.kde.org](https://store.kde.org/product/add); the category is what System Settings → *Wallpaper* → *Get New Wallpapers…* downloads from. Use `GPL-2.0-or-later` as the store license and link the repository as the source code.
+The wallpaper is published as the **Plasma 6 → Wallpaper Plugins** product [Moon Phase & Celestial Astrolabe (store.kde.org/p/2380437)](https://store.kde.org/p/2380437/) — that category is what System Settings → *Wallpaper* → *Get New Wallpapers…* downloads from.
+
+`make package` produces `build/io.github.hadealahmad.moonphase-1.0.0.tar.gz`, which contains the KPackage root (`metadata.json`), the license, and the prebuilt `contents/` tree. Upload that file as a new version of the existing product on [store.kde.org](https://store.kde.org/product/add). Use `GPL-2.0-or-later` as the store license and link the [repository](https://github.com/hadealahmad/kde-moonphase-wallpaper) as the source code.
 
 Always test the generated archive before uploading:
 
