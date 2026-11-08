@@ -1,2 +1,10 @@
 # Generated KDE Store package and its throwaway install prefix.
 /build/
+
+# Local Windows SDKs, deployment output and runtime evidence.
+/windows/.tools/
+/windows/build/
+/windows/dist/
+/windows/test-results/
+__pycache__/
+*.pyc

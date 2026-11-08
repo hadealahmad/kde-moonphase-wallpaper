@@ -8,6 +8,8 @@ A live, physically based astronomical desktop wallpaper for **KDE Plasma 6** (`i
 **Install from the KDE Store:** [Moon Phase & Celestial Astrolabe — store.kde.org/p/2380437](https://store.kde.org/p/2380437/)
 **Source code & issues:** [github.com/hadealahmad/kde-moonphase-wallpaper](https://github.com/hadealahmad/kde-moonphase-wallpaper)
 
+**Windows 11:** A native Qt 6/Direct3D 11 host is available as source in [`windows/`](windows/README.md), with desktop-wallpaper integration, tray controls and build instructions. The KDE installation below is unchanged.
+
 ![Moon Phase & Celestial Astrolabe Wallpaper — 2K Full Overview](docs/screenshots/hero_combined_2k.png)
 
 ---
