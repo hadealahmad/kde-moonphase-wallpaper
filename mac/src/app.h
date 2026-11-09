@@ -36,7 +36,13 @@ public:
 signals:
     void pausedChanged();
     void settingsChanged();
+    void displaysChanged();
 private:
+    bool displayEnabled(class QScreen *screen) const;
+    void setDisplayEnabled(class QScreen *screen, bool enabled);
+    QString displayLabel(class QScreen *screen) const;
+    int enabledDisplayCount() const;
+    void fillDisplayMenu(class QMenu *menu);
     QQuickView *makeView(bool desktop);
     void poll();
     void loadSchema();

@@ -89,9 +89,14 @@ App::App(const QString &ini, QObject *parent) : QObject(parent), prefs_(ini, QSe
     auto restart = [this] { QTimer::singleShot(300, this, [this] { if (wallpaperRequested_) start(); }); };
     auto watch = [this, restart](QScreen *screen) { connect(screen, &QScreen::geometryChanged, this, restart); };
     for (auto screen : QGuiApplication::screens()) watch(screen);
-    connect(qApp, &QGuiApplication::screenAdded, this, [watch, restart](QScreen *screen) { watch(screen); restart(); });
-    connect(qApp, &QGuiApplication::screenRemoved, this, restart);
-    connect(qApp, &QGuiApplication::primaryScreenChanged, this, restart);
+    connect(qApp, &QGuiApplication::screenAdded, this, [this, watch, restart](QScreen *screen) {
+        watch(screen); restart(); emit displaysChanged();
+    });
+    connect(qApp, &QGuiApplication::screenRemoved, this, [this, restart] {
+        restart();
+        QTimer::singleShot(0, this, [this] { emit displaysChanged(); });   // After Qt drops the screen.
+    });
+    connect(qApp, &QGuiApplication::primaryScreenChanged, this, [this, restart] { restart(); emit displaysChanged(); });
 }
 
 App::~App() {
@@ -203,6 +208,7 @@ void App::start() {
     wallpaperRequested_ = true;
     wallpapers_.clear();
     for (auto screen : QGuiApplication::screens()) {
+        if (!displayEnabled(screen)) { qInfo() << "Skipping display" << screen->name() << "(turned off in Settings)"; continue; }
         std::unique_ptr<QQuickView> view(makeView(true));
         if (!view) continue;
         view->setScreen(screen);
@@ -212,8 +218,10 @@ void App::start() {
         if (!Desktop::attach(view.get(), screen, error)) { qWarning() << error; failed = true; continue; }
         wallpapers_.push_back(std::move(view));
     }
-    if (wallpapers_.empty()) { if (!preview_ || !preview_->isVisible()) preview(); }
-    else if (preview_) preview_->hide();
+    // Fall back to the preview window only when a display should have had the
+    // wallpaper and none could be attached, not when every display is turned off.
+    if (wallpapers_.empty() && enabledDisplayCount() > 0) { if (!preview_ || !preview_->isVisible()) preview(); }
+    else if (!wallpapers_.empty() && preview_) preview_->hide();
     hidden_ = false;
 }
 
@@ -243,11 +251,63 @@ void App::poll() {
         paused_ = pause; qInfo() << "Rendering paused:" << pause; emit pausedChanged();
     }
     if (!wallpaperRequested_ || changing_ || sleeping_ || displayAsleep_) return;
-    bool recover = wallpapers_.size() != size_t(QGuiApplication::screens().size());
+    bool recover = wallpapers_.size() != size_t(enabledDisplayCount());
     for (auto &view : wallpapers_) recover = recover || !Desktop::isAttached(view.get());
     if (recover) {
         qInfo() << "Recovering missing or moved wallpaper windows";
         QTimer::singleShot(0, this, [this] { if (wallpaperRequested_) start(); });
+    }
+}
+
+bool App::displayEnabled(QScreen *screen) const {
+    // Stored as the displays turned off, so a newly connected display starts on.
+    return !prefs_.value("DisabledDisplays").toStringList().contains(Desktop::displayId(screen));
+}
+
+int App::enabledDisplayCount() const {
+    int count = 0;
+    for (auto screen : QGuiApplication::screens()) count += displayEnabled(screen) ? 1 : 0;
+    return count;
+}
+
+void App::setDisplayEnabled(QScreen *screen, bool enabled) {
+    if (displayEnabled(screen) == enabled) return;
+    QStringList disabled = prefs_.value("DisabledDisplays").toStringList();
+    const QString id = Desktop::displayId(screen);
+    if (enabled) disabled.removeAll(id); else disabled.append(id);
+    prefs_.setValue("DisabledDisplays", disabled); prefs_.sync();
+    qInfo() << "Display" << screen->name() << (enabled ? "on" : "off");
+    emit displaysChanged();
+    if (wallpaperRequested_) start();
+}
+
+QString App::displayLabel(QScreen *screen) const {
+    const auto screens = QGuiApplication::screens();
+    QString label = screen->name();
+    int same = 0, index = 0;
+    for (auto other : screens) {
+        if (other->name() != screen->name()) continue;
+        ++same;
+        if (other == screen) index = same;
+    }
+    if (same > 1) label += QString(" %1").arg(index);   // Two identical monitors.
+    const QSize size = screen->size();
+    label += QString(" — %1 × %2").arg(size.width()).arg(size.height());
+    if (screen == QGuiApplication::primaryScreen()) label += " (main)";
+    return label;
+}
+
+void App::fillDisplayMenu(QMenu *menu) {
+    menu->clear();
+    for (auto screen : QGuiApplication::screens()) {
+        auto action = menu->addAction(displayLabel(screen));
+        action->setCheckable(true);
+        action->setChecked(displayEnabled(screen));
+        QPointer<QScreen> target(screen);
+        connect(action, &QAction::toggled, this, [this, target](bool on) {
+            // Toggling rebuilds this menu, so act after the click has finished.
+            QTimer::singleShot(0, this, [this, target, on] { if (target) setDisplayEnabled(target, on); });
+        });
     }
 }
 
@@ -262,6 +322,10 @@ void App::populate(QMenu *menu) {
     menu->addAction("Start Wallpaper", this, &App::start);
     menu->addAction("Stop Wallpaper", this, &App::stop);
     menu->addAction(pauseAction_);
+    auto displays = menu->addMenu("Displays");
+    connect(displays, &QMenu::aboutToShow, this, [this, displays] { fillDisplayMenu(displays); });
+    fillDisplayMenu(displays);   // The Dock menu is read before aboutToShow.
+    connect(this, &App::displaysChanged, displays, [this, displays] { fillDisplayMenu(displays); });
     menu->addSeparator();
     menu->addAction("Preview Window", this, &App::preview);
     menu->addAction("Settings…", this, &App::settings);
@@ -321,6 +385,26 @@ void App::settings() {
     auto scroll = new QScrollArea; scroll->setWidgetResizable(true);
     auto page = new QWidget; auto form = new QFormLayout(page);
     form->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
+    auto displayBox = new QWidget;
+    auto displayList = new QVBoxLayout(displayBox);
+    displayList->setContentsMargins(0, 0, 0, 0);
+    auto fillDisplays = [this, displayList] {
+        while (auto item = displayList->takeAt(0)) { delete item->widget(); delete item; }
+        for (auto screen : QGuiApplication::screens()) {
+            auto check = new QCheckBox(displayLabel(screen));
+            check->setChecked(displayEnabled(screen));
+            QPointer<QScreen> target(screen);
+            connect(check, &QCheckBox::toggled, this, [this, target](bool on) {
+                QTimer::singleShot(0, this, [this, target, on] { if (target) setDisplayEnabled(target, on); });
+            });
+            displayList->addWidget(check);
+        }
+    };
+    fillDisplays();
+    connect(this, &App::displaysChanged, displayBox, fillDisplays);
+    auto displayLabelWidget = new QLabel("Show on displays");
+    displayLabelWidget->setToolTip("Turn the wallpaper off on a display to keep its macOS wallpaper. New displays start on.");
+    form->addRow(displayLabelWidget, displayBox);
     auto cityBox = new QComboBox;
     for (const auto &city : cities) cityBox->addItem(QString::fromUtf8(city.name));
     form->addRow("City preset", cityBox);
@@ -436,7 +520,8 @@ void App::report(const QString &file) {
     QJsonArray windows;
     for (auto &view : wallpapers_) {
         const QRect g = view->geometry();
-        windows.append(QJsonObject{{"screen", view->screen()->name()}, {"attached", Desktop::isAttached(view.get())},
+        windows.append(QJsonObject{{"screen", view->screen()->name()}, {"id", Desktop::displayId(view->screen())},
+            {"attached", Desktop::isAttached(view.get())},
             {"visible", Desktop::isVisible(view.get())},
             {"x", g.x()}, {"y", g.y()}, {"width", g.width()}, {"height", g.height()}});
     }

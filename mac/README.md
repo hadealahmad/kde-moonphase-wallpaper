@@ -19,6 +19,8 @@ This configures and builds into `build/mac`, runs the shared calculation tests p
 
 Open **Moonphase.app**. The wallpaper starts on every display, behind the desktop icons, on every Space. The menu bar crescent and the Dock icon's menu have Start, Stop, Pause, Preview, Settings and Open at Login; the menu bar menu also has the pause options and Quit. Clicking the Dock icon opens Settings. Changes save immediately.
 
+With more than one display, choose where the wallpaper runs under **Displays** in either menu, or **Show on displays** at the top of Settings. Displays you turn off keep their macOS wallpaper. The choice is saved per display (by its CoreGraphics UUID), so it survives unplugging and restarts, and a display connected for the first time starts on.
+
 The first launch picks the preset city in this Mac's timezone, if there is one; otherwise it starts at Cairo until you set a location in Settings.
 
 Rendering pauses during sleep, display sleep and screen lock, when windows or a full-screen app cover the desktop on every display, and in Low Power Mode (the last two can be turned off in the menu bar menu). The macOS wallpaper underneath is never changed, so Stop or Quit shows it again. The lock screen and Mission Control's Space thumbnails keep the macOS wallpaper.

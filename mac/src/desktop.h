@@ -10,6 +10,10 @@ class QScreen;
 namespace Desktop {
 enum class Event { Sleep, Wake, DisplaySleep, DisplayWake, Lock, Unlock, SpaceChanged };
 
+// Stable identifier for a display (CoreGraphics display UUID), the same across
+// reconnects and restarts. Falls back to the screen name.
+QString displayId(QScreen *screen);
+
 // Puts the window behind the desktop icons on every Space, ignoring input.
 bool attach(QWindow *window, QScreen *screen, QString &error);
 // The window still sits at the desktop level and covers its screen.

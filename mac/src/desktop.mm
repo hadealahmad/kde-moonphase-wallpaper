@@ -28,6 +28,20 @@ static NSScreen *nativeScreen(QScreen *screen) {
     return nil;
 }
 
+QString Desktop::displayId(QScreen *screen) {
+    NSScreen *ns = nativeScreen(screen);
+    NSNumber *number = ns.deviceDescription[@"NSScreenNumber"];
+    if (number) {
+        CFUUIDRef uuid = CGDisplayCreateUUIDFromDisplayID(number.unsignedIntValue);
+        if (uuid) {
+            NSString *text = (__bridge_transfer NSString *)CFUUIDCreateString(nullptr, uuid);
+            CFRelease(uuid);
+            return QString::fromNSString(text);
+        }
+    }
+    return screen->name();
+}
+
 static NSInteger desktopLevel() { return CGWindowLevelForKey(kCGDesktopWindowLevelKey); }
 
 bool Desktop::attach(QWindow *window, QScreen *screen, QString &error) {
