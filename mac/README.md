@@ -11,13 +11,17 @@ brew install cmake ninja qt python
 mac/scripts/package.sh
 ```
 
-This configures and builds into `build/mac`, runs the shared calculation tests plus the adapter test, then writes a self-contained, ad-hoc signed `mac/dist/Moonphase.app` (about 135 MB, Qt bundled). Drag it to `/Applications` if you like. Pass a Qt location as the first argument (`mac/scripts/package.sh ~/Qt/6.8.3/macos`) to use a Qt other than Homebrew's.
+This configures and builds into `build/mac`, runs the shared calculation tests plus the adapter test, then writes a self-contained, ad-hoc signed `mac/dist/Moonphase.app` (about 90 MB). It bundles only the parts of Qt the app uses, plus the license files of everything bundled in `Contents/Resources/Licenses` (see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)). Drag it to `/Applications` if you like. Pass a Qt location as the first argument (`mac/scripts/package.sh ~/Qt/6.8.3/macos`) to use a Qt other than Homebrew's; the license list then covers only libraries that came from Homebrew.
 
 The app is for the Mac that built it: macOS trusts apps you build yourself, but it is ad-hoc signed and not notarized, so Gatekeeper on another Mac refuses it. It is also built only for this Mac's processor (Apple Silicon or Intel), not as a universal app.
 
 ### Signed builds for other people
 
-Sharing a build that opens on any Mac needs an Apple Developer Program membership, a **Developer ID Application** certificate in your keychain, and a notarytool profile (`xcrun notarytool store-credentials <name> --apple-id <id> --team-id <team>`). After `package.sh`, sign every library and framework in the bundle, then the app, with `codesign --force --timestamp --options runtime --sign "Developer ID Application: …"`. Give the app the `com.apple.security.cs.allow-jit` entitlement, since Qt's QML engine needs it under the hardened runtime. Then zip the app with `ditto -c -k --keepParent`, submit it with `xcrun notarytool submit … --keychain-profile <name> --wait`, and staple with `xcrun stapler staple`. Zip it again after stapling for distribution.
+Sharing a build that opens on any Mac needs an Apple Developer Program membership, a **Developer ID Application** certificate in your keychain, and a notarytool profile (`xcrun notarytool store-credentials <name> --apple-id <id> --team-id <team>`).
+
+Package with `mac/scripts/package.sh --release`. It needs Homebrew's Qt, adds Qt's own license files to the app, and writes `mac/dist/Moonphase-<version>-sources.tar` (about 140 MB): the exact sources, patches and build recipes of the bundled copyleft libraries. Publish that file next to the app; the licenses require it. If it reports that a formula is newer than the installed version, run `brew upgrade` and package again.
+
+Then sign every library and framework in the bundle, then the app, with `codesign --force --timestamp --options runtime --sign "Developer ID Application: …"`. Give the app the `com.apple.security.cs.allow-jit` entitlement, since Qt's QML engine needs it under the hardened runtime. Then zip the app with `ditto -c -k --keepParent`, submit it with `xcrun notarytool submit … --keychain-profile <name> --wait`, and staple with `xcrun stapler staple`. Zip it again after stapling for distribution.
 
 `mac/resources/Moonphase.icns` is generated once from the rendered Moon close-up with `swift mac/scripts/make_icon.swift docs/screenshots/closeup_moon.png mac/resources`.
 
