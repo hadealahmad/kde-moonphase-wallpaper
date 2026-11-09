@@ -28,6 +28,12 @@ void activate();
 // QApplication exists, since Qt installs the application delegate.
 void onReopen(std::function<void()> handler);
 
+// Offers to move the app into /Applications when it runs from anywhere else
+// (Downloads, a translocated quarantine copy, …). Returns Moved when the app
+// was copied there and a relaunch from the new copy is queued: quit at once.
+enum class MoveResult { NotNeeded, Declined, DeclinedForever, Moved };
+MoveResult offerMoveToApplications();
+
 bool loginItemEnabled();
 bool setLoginItem(bool enabled, QString &error);
 }

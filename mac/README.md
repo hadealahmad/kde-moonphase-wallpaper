@@ -17,7 +17,7 @@ This configures and builds into `build/mac`, runs the shared calculation tests p
 
 ## Use
 
-Open **Moonphase.app**. The wallpaper starts on every display, behind the desktop icons, on every Space. The menu bar crescent and the Dock icon's menu have Start, Stop, Pause, Preview, Settings and Open at Login; the menu bar menu also has the pause options and Quit. Clicking the Dock icon opens Settings. Changes save immediately.
+Open **Moonphase.app**. Opened from anywhere but an Applications folder (say, Downloads after unzipping), it first offers to move itself to `/Applications` and relaunch from there; an older copy there goes to the Trash. "Don't ask again" is remembered in the preferences file. The wallpaper starts on every display, behind the desktop icons, on every Space. The menu bar crescent and the Dock icon's menu have Start, Stop, Pause, Preview, Settings and Open at Login; the menu bar menu also has the pause options and Quit. Clicking the Dock icon opens Settings. Changes save immediately.
 
 With more than one display, choose where the wallpaper runs under **Displays** in either menu, or **Show on displays** at the top of Settings. Displays you turn off keep their macOS wallpaper. The choice is saved per display (by its CoreGraphics UUID), so it survives unplugging and restarts, and a display connected for the first time starts on.
 

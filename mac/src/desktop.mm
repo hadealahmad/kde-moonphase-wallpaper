@@ -3,6 +3,7 @@
 #import <AppKit/AppKit.h>
 #import <ServiceManagement/ServiceManagement.h>
 #import <objc/runtime.h>
+#include <dlfcn.h>
 #include <QDebug>
 #include <QScreen>
 #include <QWindow>
@@ -117,6 +118,66 @@ void Desktop::onReopen(std::function<void()> handler) {
     });
     if (method) method_setImplementation(method, replacement);
     else class_addMethod(cls, selector, replacement, "c@:@c");
+}
+
+// A quarantined app opened from Downloads runs from a read-only randomized
+// copy (App Translocation). Ask Security for the real location.
+static NSString *originalBundlePath(NSString *path) {
+    if (![path containsString:@"/AppTranslocation/"]) return path;
+    using Original = CFURLRef (*)(CFURLRef, CFErrorRef *);
+    void *security = dlopen("/System/Library/Frameworks/Security.framework/Security", RTLD_LAZY);
+    auto original = security ? reinterpret_cast<Original>(dlsym(security, "SecTranslocateCreateOriginalPathForURL")) : nullptr;
+    if (!original) return nil;
+    CFURLRef url = original((__bridge CFURLRef)[NSURL fileURLWithPath:path], nullptr);
+    return url ? ((__bridge_transfer NSURL *)url).path : nil;
+}
+
+Desktop::MoveResult Desktop::offerMoveToApplications() {
+    NSString *source = originalBundlePath(NSBundle.mainBundle.bundlePath);
+    if (!source) return MoveResult::NotNeeded;
+    NSString *userApplications = [NSHomeDirectory() stringByAppendingPathComponent:@"Applications/"];
+    if ([source hasPrefix:@"/Applications/"] || [source hasPrefix:userApplications]) return MoveResult::NotNeeded;
+
+    [NSApp activateIgnoringOtherApps:YES];
+    NSAlert *alert = [NSAlert new];
+    alert.messageText = @"Move Moonphase to the Applications folder?";
+    alert.informativeText = [NSString stringWithFormat:
+        @"Moonphase is running from “%@”. In Applications it keeps working after you clean up that folder, and Open at Login stays reliable.",
+        [NSFileManager.defaultManager displayNameAtPath:source.stringByDeletingLastPathComponent]];
+    [alert addButtonWithTitle:@"Move to Applications Folder"];
+    [alert addButtonWithTitle:@"Do Not Move"];
+    alert.showsSuppressionButton = YES;
+    alert.suppressionButton.title = @"Don’t ask again";
+    if ([alert runModal] != NSAlertFirstButtonReturn)
+        return alert.suppressionButton.state == NSControlStateValueOn ? MoveResult::DeclinedForever : MoveResult::Declined;
+
+    NSFileManager *files = NSFileManager.defaultManager;
+    NSString *destination = [@"/Applications" stringByAppendingPathComponent:source.lastPathComponent];
+    NSError *error = nil;
+    BOOL ok = YES;
+    if ([files fileExistsAtPath:destination])   // An older copy: keep it in the Trash, not deleted.
+        ok = [files trashItemAtURL:[NSURL fileURLWithPath:destination] resultingItemURL:nil error:&error];
+    if (ok) ok = [files copyItemAtPath:source toPath:destination error:&error];
+    if (!ok) {
+        NSAlert *failed = [NSAlert new];
+        failed.alertStyle = NSAlertStyleWarning;
+        failed.messageText = @"Couldn’t move Moonphase";
+        failed.informativeText = [NSString stringWithFormat:@"%@\n\nDrag Moonphase into the Applications folder in Finder instead.",
+                                  error.localizedDescription];
+        [failed runModal];
+        return MoveResult::Declined;
+    }
+    [files trashItemAtURL:[NSURL fileURLWithPath:source] resultingItemURL:nil error:nil];
+    qInfo() << "Moved to" << QString::fromNSString(destination) << "; relaunching";
+
+    // Open the new copy once this process has exited, so the single-instance
+    // check does not hand the launch back to us.
+    NSTask *relaunch = [NSTask new];
+    relaunch.executableURL = [NSURL fileURLWithPath:@"/bin/sh"];
+    relaunch.arguments = @[@"-c", @"while /bin/kill -0 \"$1\" 2>/dev/null; do /bin/sleep 0.2; done; /usr/bin/open \"$2\"",
+                           @"relaunch", @(NSProcessInfo.processInfo.processIdentifier).stringValue, destination];
+    [relaunch launchAndReturnError:nil];
+    return MoveResult::Moved;
 }
 
 bool Desktop::loginItemEnabled() {

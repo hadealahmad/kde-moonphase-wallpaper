@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // macOS host, ported from the Windows host by Muhannad Al-Ahmad.
 #include "app.h"
+#include "desktop.h"
+#include <QSettings>
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QDir>
@@ -74,6 +76,20 @@ int main(int argc, char **argv) {
         socket.disconnectFromServer(); return 0;
     }
     if (command == "quit" || command == "stop" || command == "pause" || command == "resume") return 0;
+
+    // Like most Mac apps, offer to move into Applications when opened from
+    // Downloads or elsewhere. Never for test runs or development builds.
+    {
+        QSettings prefs(configDir + "/settings.ini", QSettings::IniFormat);
+        bool development = application.applicationDirPath().contains("/build/mac/");
+        if (!parser.isSet("isolated") && !development && !prefs.value("SkipMoveToApplications", false).toBool()) {
+            switch (Desktop::offerMoveToApplications()) {
+            case Desktop::MoveResult::Moved: return 0;   // The copy in Applications opens next.
+            case Desktop::MoveResult::DeclinedForever: prefs.setValue("SkipMoveToApplications", true); break;
+            default: break;
+            }
+        }
+    }
     QLocalServer server;
     server.setSocketOptions(QLocalServer::UserAccessOption);
     QLocalServer::removeServer(serverName);   // Stale socket file from a crash.
