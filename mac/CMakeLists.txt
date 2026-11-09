@@ -1,5 +1,10 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 cmake_minimum_required(VERSION 3.24)
+# Must precede project(). The bundled Qt can raise the real minimum; package.sh
+# writes that into Info.plist.
+if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)   # Also replaces an empty value cached by older builds.
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "Minimum macOS version" FORCE)
+endif()
 project(MoonphaseMac VERSION 1.0.0 LANGUAGES CXX OBJCXX)
 if(NOT APPLE)
     message(FATAL_ERROR "This entry point builds the macOS host. Use the root Makefile for KDE or windows/ for Windows.")
@@ -8,7 +13,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_OBJCXX_STANDARD 17)
 set(CMAKE_AUTOMOC ON)
-set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "Minimum macOS version")
 find_package(Qt6 6.8 REQUIRED COMPONENTS Quick Widgets Network ShaderTools)
 find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
 get_filename_component(SHARED_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)

@@ -183,8 +183,15 @@ open(out, "w").write("\n".join(lines) + "\n")
 PY
 rm -f "$dist/formulas.json"
 
+# Declare the real minimum macOS: the highest any bundled binary was built for
+# (Homebrew's libraries target the macOS they were built on). Older Macs then
+# say the app needs a newer macOS instead of letting it crash at launch.
+minos=$(find "$contents" -type f \( -perm +111 -o -name '*.dylib' \) -exec vtool -show-build {} \; 2>/dev/null \
+  | awk '/minos/ {print $2}' | sort -V | tail -1)
+plutil -replace LSMinimumSystemVersion -string "${minos:-13.0}" "$contents/Info.plist"
+
 codesign --force --deep --sign - "$app"
 codesign --verify --deep --strict "$app"
-echo "Built $app ($(du -sh "$app" | cut -f1))"
+echo "Built $app ($(du -sh "$app" | cut -f1), $(lipo -archs "$contents/MacOS/Moonphase"), macOS ${minos:-13.0} or later)"
 (( release )) && echo "Sources: $dist/Moonphase-$appversion-sources.tar ($(du -sh "$dist/Moonphase-$appversion-sources.tar" | cut -f1))"
 true
