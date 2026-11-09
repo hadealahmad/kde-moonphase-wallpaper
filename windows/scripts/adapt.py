@@ -13,7 +13,7 @@ def replace_once(text, old, new):
     return text.replace(old, new, 1)
 
 
-def adapt(source, output):
+def adapt(source, output, font='"Segoe UI"'):
     source, output = source.resolve(), output.resolve()
     if output == source or source.is_relative_to(output) or output.is_relative_to(source / 'contents'):
         raise ValueError("Generated files must be outside the shared contents tree")
@@ -50,7 +50,7 @@ function windowsCalendarDate(date) {
         text = path.read_text(encoding='utf-8')
         text = text.replace('import org.kde.kirigami as Kirigami', '')
         text = text.replace('import org.kde.plasma.plasmoid', '')
-        text = text.replace('Kirigami.Theme.defaultFont.family', '"Segoe UI"')
+        text = text.replace('Kirigami.Theme.defaultFont.family', font)
         if path.name == 'main.qml':
             text = replace_once(text, 'WallpaperItem {', '''Item {
     property var configuration: AppConfig
@@ -88,4 +88,6 @@ function windowsCalendarDate(date) {
 
 
 if __name__ == '__main__':
-    adapt(*map(pathlib.Path, sys.argv[1:]))
+    # Optional third argument: the QML font expression that replaces Kirigami's
+    # default font (the macOS host passes Qt.application.font.family).
+    adapt(pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), *sys.argv[3:4])

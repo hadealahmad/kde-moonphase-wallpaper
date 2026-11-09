@@ -8,3 +8,7 @@
 /windows/test-results/
 __pycache__/
 *.pyc
+
+# macOS build output and test runs.
+/mac/dist/
+/mac/test-results/

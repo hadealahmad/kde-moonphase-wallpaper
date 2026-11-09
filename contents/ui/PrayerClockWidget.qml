@@ -49,6 +49,29 @@ Item {
                         root.width * 0.5 - rPx * Math.sin(theta));
     }
 
+    // Clockwise shift (pixels along the ring) that moves the cardinal label at
+    // `theta` clear of any afternoon prayer glyph drawn on the outer ring.
+    // Labels at 3 and 9 o'clock are short along the ring; 12 and 6 are wide.
+    function cardinalNudge(theta) {
+        var side = Math.abs(Math.cos(theta)) > 0.5;
+        var clearance = root.width * (side ? 0.065 : 0.105);
+        var labelHour = ((Math.PI * 0.5 - theta) / (Math.PI * 2.0) * 12.0 + 12.0) % 12.0;
+        var pm = [root.dhuhrHours, root.asrHours, root.maghribHours, root.ishaHours];
+        var shift = 0.0;
+        for (var i = 0; i < pm.length; i++) {
+            var h = pm[i];
+            if (!isFinite(h) || h < 12.0) {
+                continue;
+            }
+            var dh = ((h % 12.0) - labelHour + 18.0) % 12.0 - 6.0;   // -6…6 hours
+            var along = root.width * 0.422 * Math.sin(dh * Math.PI / 6.0);
+            if (Math.abs(along) < clearance && Math.abs(dh) < 3.0) {
+                shift = (along >= 0 ? -1.0 : 1.0) * (clearance - Math.abs(along));
+            }
+        }
+        return shift;
+    }
+
     function formatHHMM(hours) {
         var totalMinutes = Math.round(((hours % 24) + 24) % 24 * 60);
         var hh = Math.floor(totalMinutes / 60) % 24;
@@ -283,9 +306,12 @@ Item {
             required property var modelData
 
             readonly property point labelPoint: root.pointOnRing(root.width * 0.440, modelData.angle)
+            // Afternoon prayer glyphs sit at 0.422w, right on this label's
+            // radius; slide the label along the ring when one comes close.
+            readonly property real nudge: root.cardinalNudge(modelData.angle)
 
-            x: labelPoint.x - width * 0.5
-            y: labelPoint.y - height * 0.5
+            x: labelPoint.x - width * 0.5 + nudge * Math.sin(modelData.angle)
+            y: labelPoint.y - height * 0.5 + nudge * Math.cos(modelData.angle)
 
             text: modelData.label
             color: Qt.rgba(0.86, 0.88, 0.92, 0.46)
