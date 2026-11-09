@@ -110,7 +110,8 @@ Item {
         visible: root.showTelemetry
         centerX: root.width * 0.5
         centerY: root.width * 0.5
-        arcRadius: root.width * 0.465
+        // Clear of the DEC label, which sits at 1.21 × orbitRadius (0.436w).
+        arcRadius: root.width * 0.505
 
         text: root.seasonName.toUpperCase()
               + "  \u2022  DAY " + root.dayOfYear + " / " + root.daysInYear
