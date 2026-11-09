@@ -4,14 +4,20 @@ Native Qt 6/Metal host for Hadi Alahmad's Moon Phase & Celestial Astrolabe wallp
 
 ## Build
 
-Needs macOS 13+, Xcode command-line tools, Homebrew `qt` (6.8+) and `ninja`, Python 3.11+ and, for the tests, Node 18+.
+Needs macOS 13+, the Xcode command-line tools (`xcode-select --install`), Python 3.11+ (macOS's own `python3` is too old; Homebrew's is fine) and, from Homebrew, CMake 3.24+, Ninja and Qt 6.8+. Node 18+ is optional: with it, the build also runs the calculation tests.
 
 ```bash
-brew install qt ninja
+brew install cmake ninja qt python
 mac/scripts/package.sh
 ```
 
-This configures and builds into `build/mac`, runs the shared calculation tests plus the adapter test, then writes a self-contained, ad-hoc signed `mac/dist/Moonphase.app` (about 135 MB, Qt bundled). Drag it to `/Applications` if you like. It is for local use: not notarized, so another Mac's Gatekeeper will refuse it.
+This configures and builds into `build/mac`, runs the shared calculation tests plus the adapter test, then writes a self-contained, ad-hoc signed `mac/dist/Moonphase.app` (about 135 MB, Qt bundled). Drag it to `/Applications` if you like. Pass a Qt location as the first argument (`mac/scripts/package.sh ~/Qt/6.8.3/macos`) to use a Qt other than Homebrew's.
+
+The app is for the Mac that built it: macOS trusts apps you build yourself, but it is ad-hoc signed and not notarized, so Gatekeeper on another Mac refuses it. It is also built only for this Mac's processor (Apple Silicon or Intel), not as a universal app.
+
+### Signed builds for other people
+
+Sharing a build that opens on any Mac needs an Apple Developer Program membership, a **Developer ID Application** certificate in your keychain, and a notarytool profile (`xcrun notarytool store-credentials <name> --apple-id <id> --team-id <team>`). After `package.sh`, sign every library and framework in the bundle, then the app, with `codesign --force --timestamp --options runtime --sign "Developer ID Application: …"`. Give the app the `com.apple.security.cs.allow-jit` entitlement, since Qt's QML engine needs it under the hardened runtime. Then zip the app with `ditto -c -k --keepParent`, submit it with `xcrun notarytool submit … --keychain-profile <name> --wait`, and staple with `xcrun stapler staple`. Zip it again after stapling for distribution.
 
 `mac/resources/Moonphase.icns` is generated once from the rendered Moon close-up with `swift mac/scripts/make_icon.swift docs/screenshots/closeup_moon.png mac/resources`.
 

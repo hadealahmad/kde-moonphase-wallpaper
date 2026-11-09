@@ -10,6 +10,8 @@ A live, physically based astronomical desktop wallpaper for **KDE Plasma 6** (`i
 
 **Windows 11:** A native Qt 6/Direct3D 11 host is available as source in [`windows/`](windows/README.md), with desktop-wallpaper integration, tray controls and build instructions. The KDE installation below is unchanged.
 
+**macOS:** A native Qt 6/Metal app is available as source in [`mac/`](mac/README.md). It runs the wallpaper behind the desktop icons on every Space and on the displays you choose, with menu bar and Dock controls, settings, and pausing during sleep, lock and Low Power Mode. Build it with `brew install cmake ninja qt python`, then `mac/scripts/package.sh`; see the [macOS README](mac/README.md) for details and signed builds.
+
 ![Moon Phase & Celestial Astrolabe Wallpaper — 2K Full Overview](docs/screenshots/hero_combined_2k.png)
 
 ---
