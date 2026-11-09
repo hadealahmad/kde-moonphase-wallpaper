@@ -8,21 +8,20 @@ The macOS app links LGPLv3 Qt, so, as for Windows, the app binary is conveyed un
 
 ## What the app bundles
 
-`mac/scripts/package.sh` copies Qt and the libraries it depends on from Homebrew into `Moonphase.app/Contents/Frameworks` and `PlugIns`, then:
+Distributed builds use the official open-source Qt 6.8.3 binaries. `mac/scripts/package.sh` copies Qt into `Moonphase.app/Contents/Frameworks` and `PlugIns`, then:
 
 - removes the Qt modules and plugins Moonphase does not use;
-- writes `Contents/Resources/Licenses/THIRD-PARTY-LIBRARIES.md`, listing every bundled library with its Homebrew formula, version, SPDX license, source URL and the files that came from it;
-- copies each formula's license, copying and notice files into `Contents/Resources/Licenses/<formula>/`.
+- copies Qt's SBOM documents for the bundled modules into `Contents/Resources/Licenses/qt-sbom/`;
+- writes `Contents/Resources/Licenses/THIRD-PARTY-LIBRARIES.md`, listing the bundled Qt modules and the third-party code Qt builds into them, with versions and SPDX licenses, from that SBOM;
+- in release builds, adds each module's `LICENSES` folder from Qt's source (`Contents/Resources/Licenses/qtbase/`, `qtdeclarative/`).
 
-The list is generated from the app being packaged, so it always matches what ships. At the time of writing it covers:
+The list is generated from the app being packaged, so it always matches what ships. Everything bundled is **Qt** (`qtbase`, `qtdeclarative`): LGPL-3.0 (or GPL-2.0/3.0), dynamically linked. Inside Qt are permissively licensed components such as FreeType, HarfBuzz, libpng, PCRE2, md4c, double-conversion and the Unicode data. Everything else comes from macOS itself. Qt Shader Tools is used only at build time to compile the shaders; it is not shipped.
 
-- **Qt** (`qtbase`, `qtdeclarative`): LGPL-3.0 (or GPL-2.0/3.0), dynamically linked. Release builds add Qt's own `LICENSES` folders from its source. Qt Shader Tools is used only at build time to compile the shaders; it is not shipped.
-- **Copyleft libraries Qt links:** GLib and gettext's libintl (LGPL-2.1-or-later), D-Bus's libdbus (AFL-2.1 or GPL-2.0-or-later), graphite2 (MIT, MPL-2.0, LGPL-2.1+ or GPL-2.0+).
-- **Permissive libraries:** ICU, OpenSSL (Apache-2.0), FreeType (FTL), HarfBuzz, libpng, PCRE2, zstd, Brotli, md4c, double-conversion and libb2.
+A build made with Homebrew's Qt instead also bundles the libraries Homebrew's Qt links (such as GLib, ICU and OpenSSL); `package.sh` then lists them by Homebrew formula and copies each formula's license files.
 
 ## Corresponding source and replacing libraries
 
-Release builds (`package.sh --release`) also write `Moonphase-<version>-sources.tar`. It holds the exact source archive, patches and Homebrew build recipe of every bundled library under a GPL, LGPL, MPL or AFL license, and is published next to the app on the same release page. The app's own source is the matching Git tag of this repository. To rebuild the whole app, follow `mac/README.md`.
+Release builds (`package.sh --release`) also write `Moonphase-<version>-sources.tar`, published next to the app on the same release page. It holds Qt's official source archives for the bundled modules at the exact version in the app, checked against Qt's published SHA-256. The app's own source is the matching Git tag of this repository. To rebuild the whole app, follow `mac/README.md`.
 
 You may replace the bundled Qt frameworks or other libraries with compatible builds of your own; reverse engineering to debug such modifications is permitted. A distributed build is signed with a hardened runtime, which rejects libraries signed by anyone else. After replacing a library, re-sign the app for your own Mac (`codesign --force --deep --sign - Moonphase.app`) or build it from source with `mac/scripts/package.sh`.
 

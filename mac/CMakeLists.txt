@@ -14,6 +14,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_OBJCXX_STANDARD 17)
 set(CMAKE_AUTOMOC ON)
 find_package(Qt6 6.8 REQUIRED COMPONENTS Quick Widgets Network ShaderTools)
+# Qt before 6.9 links Apple's AGL framework, which recent macOS SDKs no longer
+# ship. Moonphase never uses it; drop it so official Qt 6.8 LTS builds link.
+if(TARGET WrapOpenGL::WrapOpenGL)
+    get_target_property(gl_libraries WrapOpenGL::WrapOpenGL INTERFACE_LINK_LIBRARIES)
+    if(gl_libraries)
+        list(FILTER gl_libraries EXCLUDE REGEX "AGL")
+        set_target_properties(WrapOpenGL::WrapOpenGL PROPERTIES INTERFACE_LINK_LIBRARIES "${gl_libraries}")
+    endif()
+endif()
 find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
 get_filename_component(SHARED_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/.." ABSOLUTE)
 
