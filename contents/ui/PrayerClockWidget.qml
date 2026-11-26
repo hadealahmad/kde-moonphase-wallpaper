@@ -56,6 +56,29 @@ Item {
                         root.width * 0.5 - rPx * Math.sin(theta));
     }
 
+    // Clockwise shift (pixels along the ring) that moves the cardinal label at
+    // `theta` clear of any afternoon prayer glyph drawn on the outer ring.
+    // Labels at 3 and 9 o'clock are short along the ring; 12 and 6 are wide.
+    function cardinalNudge(theta) {
+        var side = Math.abs(Math.cos(theta)) > 0.5;
+        var clearance = root.width * (side ? 0.065 : 0.105);
+        var labelHour = ((Math.PI * 0.5 - theta) / (Math.PI * 2.0) * 12.0 + 12.0) % 12.0;
+        var pm = [root.dhuhrHours, root.asrHours, root.maghribHours, root.ishaHours];
+        var shift = 0.0;
+        for (var i = 0; i < pm.length; i++) {
+            var h = pm[i];
+            if (!isFinite(h) || h < 12.0) {
+                continue;
+            }
+            var dh = ((h % 12.0) - labelHour + 18.0) % 12.0 - 6.0;   // -6…6 hours
+            var along = root.width * 0.422 * Math.sin(dh * Math.PI / 6.0);
+            if (Math.abs(along) < clearance && Math.abs(dh) < 3.0) {
+                shift = (along >= 0 ? -1.0 : 1.0) * (clearance - Math.abs(along));
+            }
+        }
+        return shift;
+    }
+
     function formatHHMM(hours) {
         var totalMinutes = Math.round(((hours % 24) + 24) % 24 * 60);
         var hh = Math.floor(totalMinutes / 60) % 24;
@@ -68,24 +91,6 @@ Item {
         var hh = Math.floor(totalMinutes / 60);
         var mm = totalMinutes % 60;
         return "-" + String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
-    }
-
-    // PM prayer glyphs ride just inside the cardinal labels, so a label steps
-    // aside whenever a glyph lands on its quarter (Dhuhr near 12, Maghrib
-    // near 18, and so on).
-    function cardinalLabelClear(labelHour) {
-        var pm = [root.dhuhrHours, root.asrHours, root.maghribHours, root.ishaHours];
-        for (var i = 0; i < pm.length; i++) {
-            var h = pm[i];
-            if (!isFinite(h) || h < 12.0) {
-                continue;
-            }
-            var delta = Math.abs(((h - labelHour) % 12.0 + 18.0) % 12.0 - 6.0);
-            if (delta < 0.85) {
-                return false;
-            }
-        }
-        return true;
     }
 
     function prayerColor(index, hours) {
@@ -298,10 +303,10 @@ Item {
     // twin AM/PM hour that shares that quarter of the dial.
     Repeater {
         model: [
-            { "label": "00\u00b712", "angle": Math.PI * 0.5, "hour": 0 },
-            { "label": "03\u00b715", "angle": 0.0,           "hour": 3 },
-            { "label": "06\u00b718", "angle": Math.PI * 1.5, "hour": 6 },
-            { "label": "09\u00b721", "angle": Math.PI,       "hour": 9 }
+            { "label": "00\u00b712", "angle": Math.PI * 0.5 },
+            { "label": "03\u00b715", "angle": 0.0 },
+            { "label": "06\u00b718", "angle": Math.PI * 1.5 },
+            { "label": "09\u00b721", "angle": Math.PI }
         ]
 
         delegate: Text {
@@ -310,11 +315,13 @@ Item {
             readonly property point origin: Style.labelOrigin(root.width * 0.5, root.width * 0.5,
                                                               root.cardinalLabelRadius, modelData.angle,
                                                               width, height)
+            // Afternoon prayer glyphs sit at 0.422w, just inside this label;
+            // slide the label along the ring when one comes close.
+            readonly property real nudge: root.cardinalNudge(modelData.angle)
 
-            x: origin.x
-            y: origin.y
+            x: origin.x + nudge * Math.sin(modelData.angle)
+            y: origin.y + nudge * Math.cos(modelData.angle)
 
-            visible: root.cardinalLabelClear(modelData.hour)
             text: modelData.label
             color: Style.ink(Style.LABEL_ALPHA)
             font.family: Kirigami.Theme.defaultFont.family

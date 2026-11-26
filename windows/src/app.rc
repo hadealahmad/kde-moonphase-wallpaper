@@ -1,0 +1,22 @@
+// SPDX-FileCopyrightText: 2026 Muhannad Al-Ahmad
+#include <windows.h>
+1 VERSIONINFO
+FILEVERSION 1,0,0,0
+PRODUCTVERSION 1,0,0,0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+BEGIN
+ BLOCK "StringFileInfo"
+ BEGIN
+  BLOCK "040904b0"
+  BEGIN
+   VALUE "FileDescription", "Moonphase Windows\0"
+   VALUE "ProductName", "Moonphase Windows\0"
+   VALUE "FileVersion", "1.0.0\0"
+  END
+ END
+ BLOCK "VarFileInfo"
+ BEGIN
+  VALUE "Translation", 0x409, 1200
+ END
+END
