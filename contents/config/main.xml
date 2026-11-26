@@ -147,6 +147,24 @@
       <min>0.10</min>
       <max>1.00</max>
     </entry>
+    <entry name="MilkyWayIntensity" type="Double">
+      <label>Brightness of the faint Milky Way band (1.0 = default)</label>
+      <default>1.0</default>
+      <min>0.0</min>
+      <max>2.0</max>
+    </entry>
+    <entry name="MoonHaloIntensity" type="Double">
+      <label>Brightness of the soft glow around the Moon (1.0 = default)</label>
+      <default>1.0</default>
+      <min>0.0</min>
+      <max>2.0</max>
+    </entry>
+    <entry name="VignetteStrength" type="Double">
+      <label>Darkening towards the screen edges (1.0 = default)</label>
+      <default>1.0</default>
+      <min>0.0</min>
+      <max>2.0</max>
+    </entry>
     <entry name="SeasonalBackgroundFps" type="Int">
       <label>Seasonal background animation refresh rate in FPS</label>
       <default>20</default>

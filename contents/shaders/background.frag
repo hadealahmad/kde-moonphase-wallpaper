@@ -14,6 +14,9 @@ layout(std140, binding = 0) uniform buf {
     float moonIllumination;
     float styleMode;
     float moonRadius;   // Moon disc radius in height-normalised units (0 = no halo)
+    float milkyWayIntensity;  // 0..2, 1 = reference look
+    float haloIntensity;      // 0..2, 1 = reference look
+    float vignetteStrength;   // 0..2, 1 = reference look
     vec4 cornerPlate;   // x: |centre x|, y: top-row centre y, z: bottom-row centre y, w: radius
     vec4 cornerMask;    // x: top-right, y: bottom-left, z: bottom-right, w: top-left
 } ubuf;
@@ -149,7 +152,7 @@ vec3 milkyWay(vec2 p, float t) {
 }
 
 // Concept 1: Celestial Planisphere & Star Chart
-vec3 evalPlanisphere(vec2 p, float r, float theta, int season, float t, float aa) {
+vec3 evalPlanisphere(vec2 p, float r, float theta, int season, float t, float aa, float milky) {
     vec3 colSilver = vec3(0.84, 0.88, 0.96);
     vec3 colWarm   = vec3(0.95, 0.89, 0.74);
     vec3 colSlate  = vec3(0.52, 0.60, 0.74);
@@ -204,7 +207,9 @@ vec3 evalPlanisphere(vec2 p, float r, float theta, int season, float t, float aa
     vec3 s3 = starLayer(pStar + vec2(8.1, 5.4), 52.0, 0.22, t);
     vec3 s4 = starLayer(pStar + vec2(1.3, 7.7), 96.0, 0.20, t);
     add += (s1 * 0.62 + s2 * 0.42 + s3 * 0.26 + s4 * 0.16) * moonKeepout;
-    add += milkyWay(pStar, t) * moonKeepout;
+    if (milky > 0.001) {
+        add += milkyWay(pStar, t) * moonKeepout * milky;
+    }
 
     // Seasonal Constellations (compact & vertically centered on left/right wings)
     float cMask = 0.0;
@@ -379,11 +384,11 @@ void main() {
 
     vec3 motif = vec3(0.0);
     if (style == 0) {
-        motif = evalPlanisphere(p, r, theta, season, ubuf.time, aa);
+        motif = evalPlanisphere(p, r, theta, season, ubuf.time, aa, ubuf.milkyWayIntensity);
     } else if (style == 1) {
         motif = evalAstrolabeEtching(p, r, theta, season, ubuf.time, aa);
     } else {
-        motif = evalPlanisphere(p, r, theta, season, ubuf.time, aa) * 0.85
+        motif = evalPlanisphere(p, r, theta, season, ubuf.time, aa, ubuf.milkyWayIntensity) * 0.85
               + evalAstrolabeEtching(p, r, theta, season, ubuf.time, aa) * 0.75;
     }
 
@@ -407,16 +412,16 @@ void main() {
     col = mix(col, ubuf.baseColor.rgb * 0.92, plate * 0.55);
 
     // Soft lunar halo: forward-scattered moonlight that scales with phase.
-    if (ubuf.moonRadius > 0.0) {
+    if (ubuf.moonRadius > 0.0 && ubuf.haloIntensity > 0.001) {
         float mr = ubuf.moonRadius;
         float outside = smoothstep(mr * 0.98, mr * 1.02, r);
         float halo = exp(-(r - mr) / (mr * 0.30)) * 0.55 + exp(-(r - mr) / (mr * 1.20)) * 0.45;
-        col += vec3(0.60, 0.66, 0.78) * halo * outside * 0.085 * (0.25 + 0.75 * ubuf.moonIllumination);
+        col += vec3(0.60, 0.66, 0.78) * halo * outside * 0.085 * ubuf.haloIntensity * (0.25 + 0.75 * ubuf.moonIllumination);
     }
 
     // Gentle optical vignette keeps the eye on the Moon.
     float vig = smoothstep(0.45, 1.15, length(p * vec2(0.82, 1.0)));
-    col *= 1.0 - 0.32 * vig;
+    col *= 1.0 - clamp(0.32 * ubuf.vignetteStrength, 0.0, 0.75) * vig;
 
     fragColor = vec4(col, 1.0) * ubuf.qt_Opacity;
 }

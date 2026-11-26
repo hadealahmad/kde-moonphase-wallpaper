@@ -338,6 +338,12 @@ WallpaperItem {
         fps: root.seasonalBackgroundFps
         moonIllumination: root.moonState ? root.moonState.illumination : 0.5
         moonDiameter: root.moonSize
+        milkyWayIntensity: root.configuration.MilkyWayIntensity !== undefined
+                           ? Number(root.configuration.MilkyWayIntensity) : 1.0
+        haloIntensity: root.configuration.MoonHaloIntensity !== undefined
+                       ? Number(root.configuration.MoonHaloIntensity) : 1.0
+        vignetteStrength: root.configuration.VignetteStrength !== undefined
+                          ? Number(root.configuration.VignetteStrength) : 1.0
         cornerSize: root.cornerSize
         cornerMargin: root.cornerMargin
         plateTopRight: prayerClockWidget.visible

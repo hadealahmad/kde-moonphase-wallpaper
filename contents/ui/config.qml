@@ -38,6 +38,9 @@ Kirigami.FormLayout {
     property alias cfg_SeasonalBackgroundAnimate: seasonalAnimateCheck.checked
     property alias cfg_SeasonalBackgroundIntensity: seasonalIntensitySlider.value
     property alias cfg_SeasonalBackgroundFps: seasonalFpsSpin.value
+    property alias cfg_MilkyWayIntensity: milkyWaySlider.value
+    property alias cfg_MoonHaloIntensity: moonHaloSlider.value
+    property alias cfg_VignetteStrength: vignetteSlider.value
 
     // Explicit properties for controls that combine or map values.
     property int cfg_SeasonalBackgroundMode: 0
@@ -470,6 +473,90 @@ Kirigami.FormLayout {
             Layout.minimumWidth: Kirigami.Units.gridUnit * 3.2
             horizontalAlignment: Text.AlignRight
             text: Math.round(seasonalIntensitySlider.value * 100) + "%"
+        }
+    }
+
+    RowLayout {
+        visible: root.backgroundEnabled
+        Layout.fillWidth: true
+        spacing: Kirigami.Units.smallSpacing
+
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Milky Way:")
+
+        QQC2.Slider {
+            id: milkyWaySlider
+
+            Layout.fillWidth: true
+            Layout.minimumWidth: Kirigami.Units.gridUnit * 12
+
+            from: 0.0
+            to: 2.0
+            stepSize: 0.05
+            snapMode: QQC2.Slider.SnapAlways
+
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Milky Way brightness")
+        }
+
+        QQC2.Label {
+            Layout.minimumWidth: Kirigami.Units.gridUnit * 3.2
+            horizontalAlignment: Text.AlignRight
+            text: Math.round(milkyWaySlider.value * 100) + "%"
+        }
+    }
+
+    RowLayout {
+        visible: root.backgroundEnabled
+        Layout.fillWidth: true
+        spacing: Kirigami.Units.smallSpacing
+
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Moon glow:")
+
+        QQC2.Slider {
+            id: moonHaloSlider
+
+            Layout.fillWidth: true
+            Layout.minimumWidth: Kirigami.Units.gridUnit * 12
+
+            from: 0.0
+            to: 2.0
+            stepSize: 0.05
+            snapMode: QQC2.Slider.SnapAlways
+
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Glow around the Moon")
+        }
+
+        QQC2.Label {
+            Layout.minimumWidth: Kirigami.Units.gridUnit * 3.2
+            horizontalAlignment: Text.AlignRight
+            text: Math.round(moonHaloSlider.value * 100) + "%"
+        }
+    }
+
+    RowLayout {
+        visible: root.backgroundEnabled
+        Layout.fillWidth: true
+        spacing: Kirigami.Units.smallSpacing
+
+        Kirigami.FormData.label: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Edge shading:")
+
+        QQC2.Slider {
+            id: vignetteSlider
+
+            Layout.fillWidth: true
+            Layout.minimumWidth: Kirigami.Units.gridUnit * 12
+
+            from: 0.0
+            to: 2.0
+            stepSize: 0.05
+            snapMode: QQC2.Slider.SnapAlways
+
+            Accessible.name: i18nd("plasma_wallpaper_io.github.hadealahmad.moonphase", "Darkening towards the screen edges")
+        }
+
+        QQC2.Label {
+            Layout.minimumWidth: Kirigami.Units.gridUnit * 3.2
+            horizontalAlignment: Text.AlignRight
+            text: Math.round(vignetteSlider.value * 100) + "%"
         }
     }
 

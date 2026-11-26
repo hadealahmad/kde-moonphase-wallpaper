@@ -10,6 +10,8 @@ import QtQuick
 
 import org.kde.kirigami as Kirigami
 
+import "../code/style.js" as Style
+
 Item {
     id: root
 
@@ -28,8 +30,8 @@ Item {
 
     // --- Geometry (flat circular top-down projection) -----------------------
     readonly property real orbitRadius: width * 0.36
-    readonly property real labelSize: Math.max(7, Math.round(width * 0.039))
-    readonly property real captionSize: Math.max(7, Math.round(width * 0.040))
+    readonly property real labelSize: Style.labelSize(width)
+    readonly property real captionSize: Style.captionSize(width)
 
     implicitWidth: 230
     implicitHeight: Math.round(width * 1.08)
@@ -78,12 +80,11 @@ Item {
             y: labelPoint.y - height * 0.5
 
             text: modelData.label
-            color: Qt.rgba(0.86, 0.88, 0.92, 0.50)
+            color: Style.ink(Style.LABEL_ALPHA)
             font.family: Kirigami.Theme.defaultFont.family
             font.pixelSize: root.labelSize
             font.weight: Font.Medium
-            font.letterSpacing: 0.9
-            renderType: Text.NativeRendering
+            font.letterSpacing: Style.labelTracking(root.labelSize)
         }
     }
 
@@ -95,12 +96,11 @@ Item {
         y: jan1Point.y - height * 0.5
 
         text: "JAN 1"
-        color: Qt.rgba(0.95, 0.80, 0.45, 0.50)
+        color: Style.accent(Style.MINOR_ALPHA)
         font.family: Kirigami.Theme.defaultFont.family
-        font.pixelSize: Math.max(6, Math.round(root.labelSize * 0.82))
-        font.weight: Font.Normal
-        font.letterSpacing: 0.6
-        renderType: Text.NativeRendering
+        font.pixelSize: Style.minorSize(root.width)
+        font.weight: Font.Medium
+        font.letterSpacing: Style.labelTracking(Style.minorSize(root.width))
     }
 
     CurvedText {
@@ -111,15 +111,15 @@ Item {
         centerX: root.width * 0.5
         centerY: root.width * 0.5
         // Seated outside the DEC season label (0.436w) so the two never touch.
-        arcRadius: root.width * 0.525
+        arcRadius: root.width * Style.CAPTION_RADIUS
 
         text: root.seasonName.toUpperCase()
               + "  \u2022  DAY " + root.dayOfYear + " / " + root.daysInYear
               + "  \u2022  " + (root.yearProgress * 100).toFixed(1) + "%"
 
-        color: Qt.rgba(0.86, 0.88, 0.92, 0.58)
+        color: Style.ink(Style.CAPTION_ALPHA)
         pixelSize: root.captionSize
         fontWeight: Font.Normal
-        letterSpacing: 0.7
+        letterSpacing: Style.captionTracking(root.captionSize)
     }
 }

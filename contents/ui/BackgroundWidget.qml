@@ -32,6 +32,11 @@ Item {
     // Moon disc diameter in pixels; drives the soft lunar halo (0 disables it).
     property real moonDiameter: 0.0
 
+    // Strength of the atmospheric touches (0 = off, 1 = reference, 2 = max).
+    property real milkyWayIntensity: 1.0
+    property real haloIntensity: 1.0
+    property real vignetteStrength: 1.0
+
     // Corner instrument layout, mirrored from main.qml so the sky can be
     // quietened behind each enabled widget. Bottom widgets are 1.08x taller
     // than wide with the dial on top, so their dial centre sits higher.
@@ -74,6 +79,9 @@ Item {
         property real intensity: root.intensity
         property real moonIllumination: root.moonIllumination
         property real styleMode: root.styleMode
+        property real milkyWayIntensity: root.milkyWayIntensity
+        property real haloIntensity: root.haloIntensity
+        property real vignetteStrength: root.vignetteStrength
         property real moonRadius: root.height > 0 ? root.moonDiameter * 0.5 / root.height : 0.0
         property vector4d cornerPlate: root.height > 0
             ? Qt.vector4d(0.5 * root.width / root.height - (root.cornerMargin + root.cornerSize * 0.5) / root.height,
