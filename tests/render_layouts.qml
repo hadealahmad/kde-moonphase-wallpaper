@@ -13,6 +13,9 @@
     Run:
         xvfb-run -a -s "-screen 0 3840x2160x24" \
             env QSG_RHI_BACKEND=opengl qml6 tests/render_layouts.qml
+
+    Pass `-- --screenshots` to render the README showcase frames (2560x1440)
+    into /tmp/opencode/screenshots instead; see `make screenshots`.
 */
 
 import QtQuick
@@ -33,14 +36,26 @@ Window {
     color: "#05070d"
     title: "Moon Phase - layout QA"
 
-    readonly property string outputDir: "file:///tmp/opencode/layouts/"
+    readonly property bool screenshotMode: Qt.application.arguments.indexOf("--screenshots") >= 0
+    readonly property string outputDir: window.screenshotMode
+                                        ? "file:///tmp/opencode/screenshots/"
+                                        : "file:///tmp/opencode/layouts/"
     readonly property real observerLat: 30.0
     readonly property real observerLon: 31.2
     readonly property date sceneDate: new Date(Date.UTC(2026, 9, 19, 19, 0, 0))
 
     // w, h: screen; moon: MoonScale; size/margin: corner widgets;
     // o/e/p: orbit/earth/prayer enabled; t: captions; style: background style.
-    readonly property var configs: [
+    // README showcase frames (docs/screenshots), all at 2560x1440.
+    readonly property var screenshotConfigs: [
+        { "file": "hero_combined_2k.png",        "w": 2560, "h": 1440, "moon": 0.45, "size": 300, "margin": 48, "o": true,  "e": true,  "p": true,  "t": true,  "style": 2 },
+        { "file": "bg_planisphere_2k.png",       "w": 2560, "h": 1440, "moon": 0.45, "size": 300, "margin": 48, "o": true,  "e": true,  "p": true,  "t": true,  "style": 0 },
+        { "file": "bg_astrolabe_2k.png",         "w": 2560, "h": 1440, "moon": 0.45, "size": 300, "margin": 48, "o": true,  "e": true,  "p": true,  "t": true,  "style": 1 },
+        { "file": "minimal_moon_only_2k.png",    "w": 2560, "h": 1440, "moon": 0.45, "size": 300, "margin": 48, "o": false, "e": false, "p": false, "t": true,  "style": 0 },
+        { "file": "clean_no_telemetry_2k.png",   "w": 2560, "h": 1440, "moon": 0.45, "size": 300, "margin": 48, "o": true,  "e": true,  "p": true,  "t": false, "style": 0 }
+    ]
+
+    readonly property var layoutConfigs: [
         { "file": "01_1080p_default.png",        "w": 1920, "h": 1080, "moon": 0.45, "size": 230, "margin": 36, "o": true,  "e": true,  "p": true,  "t": true,  "style": 0 },
         { "file": "02_1080p_small_tight.png",    "w": 1920, "h": 1080, "moon": 0.45, "size": 140, "margin": 16, "o": true,  "e": true,  "p": true,  "t": true,  "style": 0 },
         { "file": "03_1080p_large_loose.png",    "w": 1920, "h": 1080, "moon": 0.45, "size": 400, "margin": 96, "o": true,  "e": true,  "p": true,  "t": true,  "style": 0 },
@@ -54,6 +69,8 @@ Window {
         { "file": "11_no_widgets.png",           "w": 1920, "h": 1080, "moon": 0.45, "size": 230, "margin": 36, "o": false, "e": false, "p": false, "t": true,  "style": 0 },
         { "file": "12_portrait.png",             "w": 1080, "h": 1920, "moon": 0.45, "size": 230, "margin": 36, "o": true,  "e": true,  "p": true,  "t": true,  "style": 0 }
     ]
+
+    readonly property var configs: window.screenshotMode ? window.screenshotConfigs : window.layoutConfigs
 
     property int index: 0
     property var cfg: window.configs[0]

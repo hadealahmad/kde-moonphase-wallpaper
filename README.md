@@ -30,6 +30,8 @@ A live, physically based astronomical desktop wallpaper for **KDE Plasma 6** (`i
 
 - **Razor-Sharp Screen-Space Anti-Aliased Geometry:** Uses `fwidth(r)` screen-space derivatives (`crispStroke`) for 1-pixel anti-aliased concentric coordinate rings, 72/120-tick lunar bezel graduation marks, and constellation lines with zero Gaussian blur.
 - **Smart FBO Caching:** Caches the full-screen backdrop in an offscreen FBO (`layer.enabled: root.shaderActive && !root.animate`) only when static, and renders directly to the scene graph without allocating a 15–33 MB full-screen FBO when animated.
+- **Star-Atlas Sky:** Constellations are drawn as magnitude-weighted stars joined by hairlines that stop short of each star; the starfield is tinted by colour temperature and crossed by a faint Milky Way band with dust lanes. A phase-scaled lunar halo and a gentle vignette keep the eye on the Moon, and the sky is quietened behind each enabled corner instrument.
+- **Moon-Relative Framing:** The bezel, graduation ticks and caption keepouts scale with the configured Moon size (and screen orientation), so small, large and portrait layouts keep the same proportions.
 - **Mid-Vertical Constellation Placement:** Seasonal zodiac and major constellations (Orion, Cygnus, Cassiopeia, Leo) are scaled and positioned in the vertical mid-band (`y ∈ [0.36, 0.64]`) so they never collide with the corner instruments.
 - **Three User-Switchable Styles (`SeasonalBackgroundStyle`):**
 
@@ -59,7 +61,8 @@ A live, physically based astronomical desktop wallpaper for **KDE Plasma 6** (`i
 - **Real NASA GEBCO 08 Topography, Bathymetry & Black Marble Relief:**
   - `earth_normal.png` (`1024×512 RGB`) packs tangent-space surface normals (`RG`) computed from merged land elevation (`gebco_08_rev_elev`) and ocean floor bathymetry (`gebco_08_rev_bath`) together with nocturnal city-light luminance (`B`, `BlackMarble_2016`).
   - `earth_day.png` (`1024×512 RGBA`) encodes muted land/ocean albedo in `RGB` and continuous bathymetric depth (`[0.58..1.00]`) + land elevation (`[0.20..0.48]`) in `Alpha`.
-- **Physically Based Day/Night Shading & Curved Telemetry:** Uses the same Lommel-Seeliger + Lambertian diffuse model as the Moon, casting relief shadows across mountain ranges (Himalayas, Andes) and mid-ocean ridges near the solar terminator, plus warm nocturnal city lights, polar ice caps, an observer reticle pin, and a curved telemetry arc (`30.0°N, 31.2°E • SOLAR 21:04`) seated cleanly outside the globe's circumference (`r = 0.560 * width`).
+- **Physically Based Day/Night Shading & Curved Telemetry:** Uses the same Lommel-Seeliger + Lambertian diffuse model as the Moon, casting relief shadows across mountain ranges (Himalayas, Andes) and mid-ocean ridges near the solar terminator, plus warm nocturnal city lights, polar ice caps, an observer reticle pin, and a curved telemetry arc (`30.0°N, 31.2°E • SOLAR 21:04`) seated cleanly outside the globe's circumference (`r = 0.530 * width`, shared by all corner instruments via `style.js`).
+- **Atmospheric Limb:** The globe fills 92% of its square; the outer band carries a thin, sun-weighted blue atmosphere with a faint forward-scattering ring when the Sun is behind the Earth.
 
 #### Top-Right: Dual-Ring Analogue Prayer Times Astrolabe Clock (`PrayerClockWidget.qml` + `prayer_clock.frag` + `prayer.js`)
 - **Concentric 12-Hour Rings:**
@@ -96,7 +99,7 @@ A live, physically based astronomical desktop wallpaper for **KDE Plasma 6** (`i
 
 - **Your Location:** One-click **City Preset** dropdown (23 world cities across both hemispheres + `Custom Coordinates`) that automatically fills Latitude/Longitude and toggles Southern Hemisphere orientation when `Latitude < 0°`.
 - **Center Moon & Labels:** Percentage sliders for Moon size, Crater depth, and Dark-side glow, plus a single toggle for all curved info captions (`ShowTelemetryOverlay`).
-- **Background & Star Chart:** Unified style selector (`Star Chart`, `Seasonal Wireframe Etchings`, `Combined`, `Solid Color Only`) with progressive disclosure that hides inactive controls.
+- **Background & Star Chart:** Unified style selector (`Star Chart`, `Seasonal Wireframe Etchings`, `Combined`, `Solid Color Only`) with progressive disclosure that hides inactive controls, plus `Milky Way`, `Moon glow` and `Edge shading` strength sliders (0–200%).
 - **Corner Instruments:** Each instrument's sub-options are grouped directly under its toggle and automatically hide when that instrument is unchecked.
 - **Time-Travel Sandbox & Advanced:** Collapsible simulation mode with an inline warning banner, one-click `Return to Live Time` action, hemisphere-aware season readout, and dual `Local Solar · UTC` time readout.
 
@@ -116,7 +119,8 @@ kde-moonphase-wallpaper/
 │   ├── code/
 │   │   ├── astronomy.js                 # .pragma library: Meeus lunar & heliocentric Earth ephemeris
 │   │   ├── hijri.js                     # .pragma library: Umm al-Qura Hijri conversion + Arabic labels
-│   │   └── prayer.js                    # .pragma library: Solar-zenith prayer calculator + AlAdhan API cache
+│   │   ├── prayer.js                    # .pragma library: Solar-zenith prayer calculator + AlAdhan API cache
+│   │   └── style.js                     # .pragma library: Shared dial typography and Moon caption geometry
 │   ├── config/
 │   │   └── main.xml                     # KConfigXT schema for all user-configurable settings
 │   ├── images/
@@ -140,6 +144,7 @@ kde-moonphase-wallpaper/
 ├── scripts/
 │   ├── prepare_assets.py                # Downloads & bakes channel-packed NASA LRO Moon normal+albedo texture
 │   ├── prepare_earth_assets.py          # Downloads & bakes 1024×512 NASA BlueMarble/BlackMarble/GEBCO Earth maps
+│   ├── crop_screenshots.py              # Copies README frames and cuts instrument close-ups (`make screenshots`)
 │   └── earth_assets_provenance.txt      # SHA-256 provenance of all 5 NASA source datasets
 └── tests/
     ├── test_astronomy.mjs               # Node unit tests for lunar phase, libration, and syzygies (9 tests)
@@ -148,7 +153,8 @@ kde-moonphase-wallpaper/
     ├── test_prayer.mjs                  # Node unit tests for prayer zenith math & AlAdhan parser (13 tests)
     ├── shader_smoke.qml                 # Headless OpenGL smoke test for all 5 shaders + procedural maps
     ├── preview.qml                      # Headless renderer for the 4 principal lunar phases
-    └── render_full_wallpaper.qml        # Headless 1920×1080 renderer across all 4 seasons
+    ├── render_full_wallpaper.qml        # Headless 1920×1080 renderer across all 4 seasons
+    └── render_layouts.qml               # Headless layout matrix (sizes, Moon scales, widgets) + README frames
 ```
 
 ---
@@ -250,6 +256,9 @@ make preview-full
 # Render 12 layout variants (resolutions, Moon scales, corner sizes, enabled widgets)
 # into /tmp/opencode/layouts/
 make preview-layouts
+
+# Regenerate the README showcase images in docs/screenshots/
+make screenshots
 ```
 
 ### Publishing to the KDE Store

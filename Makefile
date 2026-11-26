@@ -25,7 +25,7 @@ ifeq ($(strip $(PACKAGE_VERSION)),)
 $(error Could not read KPlugin.Version from metadata.json)
 endif
 
-.PHONY: all shader install package package-test clean smoke preview preview-full preview-layouts test
+.PHONY: all shader install package package-test clean smoke preview preview-full preview-layouts screenshots test
 
 all: shader
 
@@ -79,6 +79,14 @@ preview-full: shader
 preview-layouts: shader
 	mkdir -p /tmp/opencode/layouts
 	xvfb-run -a -s "-screen 0 3840x2160x24" env QSG_RHI_BACKEND=opengl qml6 tests/render_layouts.qml
+
+# Regenerate the README showcase images in docs/screenshots/ (2560x1440 frames
+# plus instrument close-ups cropped from the hero frame). settings_ui.png is
+# captured by hand from the Plasma settings dialog.
+screenshots: shader
+	mkdir -p /tmp/opencode/screenshots
+	xvfb-run -a -s "-screen 0 3840x2160x24" env QSG_RHI_BACKEND=opengl qml6 tests/render_layouts.qml -- --screenshots
+	python3 scripts/crop_screenshots.py /tmp/opencode/screenshots docs/screenshots
 
 # Pure-JS ephemeris tests (no Qt required).
 test:
