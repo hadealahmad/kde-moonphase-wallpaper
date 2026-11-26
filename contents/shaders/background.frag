@@ -152,30 +152,37 @@ vec3 milkyWay(vec2 p, float t) {
 }
 
 // Concept 1: Celestial Planisphere & Star Chart
-vec3 evalPlanisphere(vec2 p, float r, float theta, int season, float t, float aa, float milky) {
+// k scales the Moon frame (bezel, ticks, keepouts) with the Moon radius;
+// k = 1 is the reference 0.45 Moon on a landscape screen.
+vec3 evalPlanisphere(vec2 p, float r, float theta, int season, float t, float aa, float milky, float k) {
     vec3 colSilver = vec3(0.84, 0.88, 0.96);
     vec3 colWarm   = vec3(0.95, 0.89, 0.74);
     vec3 colSlate  = vec3(0.52, 0.60, 0.74);
 
-    float moonKeepout = smoothstep(0.22, 0.27, r);
+    float frameR = 0.265 * k;
+    float moonKeepout = smoothstep(0.22 * k, 0.27 * k, r);
     vec3 add = vec3(0.0);
 
     // Concentric celestial coordinate circles (crisp 1px anti-aliased strokes)
-    float r1 = crispStroke(abs(r - 0.265), 0.00055, aa) * 0.54;
-    float r2 = crispStroke(abs(r - 0.420), 0.00048, aa) * 0.26;
-    float r3 = crispStroke(abs(r - 0.620), 0.00048, aa) * 0.20;
-    float r4 = crispStroke(abs(r - 0.840), 0.00048, aa) * 0.14;
+    // Outer reference rings stay screen-relative, but give way to a large Moon.
+    float r1 = crispStroke(abs(r - frameR), 0.00055, aa) * 0.54;
+    float r2 = crispStroke(abs(r - 0.420), 0.00048, aa) * 0.26 * smoothstep(frameR + 0.03, frameR + 0.08, 0.420);
+    float r3 = crispStroke(abs(r - 0.620), 0.00048, aa) * 0.20 * smoothstep(frameR + 0.03, frameR + 0.08, 0.620);
+    float r4 = crispStroke(abs(r - 0.840), 0.00048, aa) * 0.14 * smoothstep(frameR + 0.03, frameR + 0.08, 0.840);
     add += colSlate * (r1 + r2 + r3 + r4);
 
     // Sharp degree ticks around the inner Moon framing ring (r = 0.265)
-    float nTicks = 72.0;
+    // Halve the graduation on small frames so the ticks never crowd.
+    bool sparse = k < 0.6;
+    float nTicks = sparse ? 36.0 : 72.0;
     float stepA = TWO_PI / nTicks;
     float idx = floor((theta + 0.5 * stepA) / stepA);
     float ang = idx * stepA;
     float dAng = abs(atan(sin(theta - ang), cos(theta - ang))) * r;
-    bool major = mod(idx, 6.0) < 0.5;
-    float tLen = major ? 0.011 : 0.0050;
-    float tickRadial = 1.0 - smoothstep(tLen - aa * 0.5, tLen + aa * 0.5, abs(r - 0.265));
+    bool major = mod(idx, sparse ? 3.0 : 6.0) < 0.5;
+    float tickScale = clamp(k, 0.6, 1.4);
+    float tLen = (major ? 0.011 : 0.0050) * tickScale;
+    float tickRadial = 1.0 - smoothstep(tLen - aa * 0.5, tLen + aa * 0.5, abs(r - frameR));
     float tickHalfW = major ? 0.00055 : 0.00042;
     float tick = tickRadial * crispStroke(dAng, tickHalfW, aa) * (major ? 0.62 : 0.34);
     add += colSilver * tick;
@@ -183,7 +190,7 @@ vec3 evalPlanisphere(vec2 p, float r, float theta, int season, float t, float aa
     // Keepout around the bottom curved Moon telemetry arc (r in [0.28, 0.32], bottom sector)
     float bottomAngDist = abs(atan(sin(theta + 0.5 * PI), cos(theta + 0.5 * PI)));
     float textSectorKeepout = 1.0 - (1.0 - smoothstep(0.32, 0.42, bottomAngDist))
-                                  * (1.0 - smoothstep(0.018, 0.026, abs(r - 0.298)));
+                                  * (1.0 - smoothstep(0.018, 0.026, abs(r - 0.298 * k)));
 
     // 12 radial hour-angle lines broken inside r = 0.265
     float hStep = TWO_PI / 12.0;
@@ -191,7 +198,7 @@ vec3 evalPlanisphere(vec2 p, float r, float theta, int season, float t, float aa
     float hAng = hIdx * hStep;
     float hPerp = abs(atan(sin(theta - hAng), cos(theta - hAng))) * r;
     float hLine = crispStroke(hPerp, 0.00048, aa)
-                * smoothstep(0.278, 0.295, r)
+                * smoothstep(0.278 * k, 0.295 * k, r)
                 * (1.0 - smoothstep(0.82, 0.92, r))
                 * textSectorKeepout * 0.14;
     add += colSlate * hLine;
@@ -270,7 +277,7 @@ vec3 evalPlanisphere(vec2 p, float r, float theta, int season, float t, float aa
 }
 
 // Concept 3: Engraved Astrolabe & Seasonal Wireframe Etchings
-vec3 evalAstrolabeEtching(vec2 p, float r, float theta, int season, float t, float aa) {
+vec3 evalAstrolabeEtching(vec2 p, float r, float theta, int season, float t, float aa, float k) {
     vec3 colSilver = vec3(0.84, 0.88, 0.96);
     vec3 colWarm   = vec3(0.95, 0.89, 0.74);
     vec3 colSlate  = vec3(0.48, 0.55, 0.68);
@@ -278,18 +285,21 @@ vec3 evalAstrolabeEtching(vec2 p, float r, float theta, int season, float t, flo
     vec3 add = vec3(0.0);
 
     // Central Astrolabe Moon Frame (crisp 1px rings & ticks)
-    float rInner = crispStroke(abs(r - 0.258), 0.00055, aa) * 0.58;
-    float rOuter = crispStroke(abs(r - 0.278), 0.00050, aa) * 0.42;
+    float rIn = 0.258 * k;
+    float rOut = 0.278 * k;
+    float rInner = crispStroke(abs(r - rIn), 0.00055, aa) * 0.58;
+    float rOuter = crispStroke(abs(r - rOut), 0.00050, aa) * 0.42;
     add += colSilver * (rInner + rOuter);
 
-    float nTicks = 120.0;
+    bool sparse = k < 0.6;
+    float nTicks = sparse ? 60.0 : 120.0;
     float stepA = TWO_PI / nTicks;
     float idx = floor((theta + 0.5 * stepA) / stepA);
     float ang = idx * stepA;
     float dAng = abs(atan(sin(theta - ang), cos(theta - ang))) * r;
-    bool major = mod(idx, 10.0) < 0.5;
-    float rEnd = major ? 0.276 : 0.271;
-    float inBand = smoothstep(0.258 - aa * 0.5, 0.258 + aa * 0.5, r)
+    bool major = mod(idx, sparse ? 5.0 : 10.0) < 0.5;
+    float rEnd = rIn + (rOut - rIn) * (major ? 0.90 : 0.65);
+    float inBand = smoothstep(rIn - aa * 0.5, rIn + aa * 0.5, r)
                  * (1.0 - smoothstep(rEnd - aa * 0.5, rEnd + aa * 0.5, r));
     float tickHalfW = major ? 0.00052 : 0.00038;
     float tick = inBand * crispStroke(dAng, tickHalfW, aa) * (major ? 0.64 : 0.34);
@@ -297,18 +307,18 @@ vec3 evalAstrolabeEtching(vec2 p, float r, float theta, int season, float t, flo
 
     float bottomAngDist = abs(atan(sin(theta + 0.5 * PI), cos(theta + 0.5 * PI)));
     float textSectorKeepout = 1.0 - (1.0 - smoothstep(0.32, 0.42, bottomAngDist))
-                                  * (1.0 - smoothstep(0.018, 0.026, abs(r - 0.298)));
+                                  * (1.0 - smoothstep(0.018, 0.026, abs(r - 0.298 * k)));
 
     float cardAng = mod(theta + PI * 0.25, PI * 0.5) - PI * 0.25;
     float cardPerp = abs(sin(cardAng)) * r;
     float cardLine = crispStroke(cardPerp, 0.00050, aa)
-                   * smoothstep(0.282, 0.295, r)
-                   * (1.0 - smoothstep(0.36, 0.42, r))
+                   * smoothstep(0.282 * k, 0.295 * k, r)
+                   * (1.0 - smoothstep(0.36 * k, 0.42 * k, r))
                    * textSectorKeepout * 0.34;
     add += colWarm * cardLine;
 
     // Seasonal Engraved Corner Etchings (keep center & all 3 corner widgets clear)
-    float centerClear = smoothstep(0.38, 0.54, r);
+    float centerClear = smoothstep(0.38 * max(k, 1.0), 0.54 * max(k, 1.0), r);
     float widgetCornerClear = smoothstep(0.18, 0.34, length(p - vec2(-0.72, -0.34)))
                             * smoothstep(0.18, 0.34, length(p - vec2( 0.72, -0.34)))
                             * smoothstep(0.18, 0.34, length(p - vec2( 0.72,  0.34)));
@@ -382,14 +392,17 @@ void main() {
     int season = int(clamp(floor(ubuf.seasonIndex + 0.5), 0.0, 3.0));
     int style = int(clamp(floor(ubuf.styleMode + 0.5), 0.0, 2.0));
 
+    // Moon frame scale relative to the reference 0.45 landscape Moon.
+    float k = ubuf.moonRadius > 0.0 ? ubuf.moonRadius / 0.225 : 1.0;
+
     vec3 motif = vec3(0.0);
     if (style == 0) {
-        motif = evalPlanisphere(p, r, theta, season, ubuf.time, aa, ubuf.milkyWayIntensity);
+        motif = evalPlanisphere(p, r, theta, season, ubuf.time, aa, ubuf.milkyWayIntensity, k);
     } else if (style == 1) {
-        motif = evalAstrolabeEtching(p, r, theta, season, ubuf.time, aa);
+        motif = evalAstrolabeEtching(p, r, theta, season, ubuf.time, aa, k);
     } else {
-        motif = evalPlanisphere(p, r, theta, season, ubuf.time, aa, ubuf.milkyWayIntensity) * 0.85
-              + evalAstrolabeEtching(p, r, theta, season, ubuf.time, aa) * 0.75;
+        motif = evalPlanisphere(p, r, theta, season, ubuf.time, aa, ubuf.milkyWayIntensity, k) * 0.85
+              + evalAstrolabeEtching(p, r, theta, season, ubuf.time, aa, k) * 0.75;
     }
 
     // Corner instrument plates: quiet the sky behind each enabled corner

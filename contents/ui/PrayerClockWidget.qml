@@ -38,6 +38,11 @@ Item {
     readonly property real outerRadius: width * 0.365
     readonly property real labelSize: Style.labelSize(width)
     readonly property real captionSize: Style.captionSize(width)
+    readonly property bool compact: width < Style.COMPACT_WIDTH
+
+    // Cardinal labels sit just outside the bezel ring (r = 0.415w in
+    // prayer_clock.frag), inner edge first, at every widget size.
+    readonly property real cardinalLabelRadius: root.width * 0.415 + 3
 
     implicitWidth: 230
     implicitHeight: Math.round(width * 1.08)
@@ -302,10 +307,12 @@ Item {
         delegate: Text {
             required property var modelData
 
-            readonly property point labelPoint: root.pointOnRing(root.width * 0.440, modelData.angle)
+            readonly property point origin: Style.labelOrigin(root.width * 0.5, root.width * 0.5,
+                                                              root.cardinalLabelRadius, modelData.angle,
+                                                              width, height)
 
-            x: labelPoint.x - width * 0.5
-            y: labelPoint.y - height * 0.5
+            x: origin.x
+            y: origin.y
 
             visible: root.cardinalLabelClear(modelData.hour)
             text: modelData.label
@@ -324,11 +331,12 @@ Item {
         visible: root.showTelemetry
         centerX: root.width * 0.5
         centerY: root.width * 0.5
-        arcRadius: root.width * Style.CAPTION_RADIUS
+        arcRadius: Math.max(root.width * Style.CAPTION_RADIUS,
+                            root.cardinalLabelRadius + root.labelSize * 1.2 + root.captionSize * 0.7)
 
         text: root.nextPrayerName.toUpperCase()
               + " " + root.formatHHMM(root.nextPrayerHours)
-              + " (" + root.formatCountdown(root.minutesToNextPrayer) + ")"
+              + (root.compact ? "" : " (" + root.formatCountdown(root.minutesToNextPrayer) + ")")
               + "  \u2022  " + root.formatHHMM(root.localTimeHours)
 
         color: Style.ink(Style.CAPTION_ALPHA)

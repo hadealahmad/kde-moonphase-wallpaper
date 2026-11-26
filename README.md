@@ -215,7 +215,7 @@ graph TD
 ### Development & Asset-Regeneration Dependencies (Optional)
 - **Shader Compiler:** `/usr/lib64/qt6/bin/qsb` (from `qt6-shadertools` / `qt6-shadertools-devel`)
 - **Unit Test Runner:** `node` (Node.js >= 18) for `make test`
-- **Headless Visual Tests:** `xvfb-run` + `qml6` + `python3` (`Pillow`) for `make smoke`, `make preview`, and `make preview-full`
+- **Headless Visual Tests:** `xvfb-run` + `qml6` + `python3` (`Pillow`) for `make smoke`, `make preview`, `make preview-full`, and `make preview-layouts`
 - **NASA Texture Baker Scripts (`scripts/prepare_*.py`):** `python3` with `numpy`, `scipy`, `Pillow`, and `tifffile`
 
 ---
@@ -246,6 +246,10 @@ make smoke
 
 # Render 4 full 1920x1080 seasonal desktop previews into /tmp/opencode/full_wallpaper/
 make preview-full
+
+# Render 12 layout variants (resolutions, Moon scales, corner sizes, enabled widgets)
+# into /tmp/opencode/layouts/
+make preview-layouts
 ```
 
 ### Publishing to the KDE Store

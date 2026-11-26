@@ -32,6 +32,11 @@ Item {
     readonly property real orbitRadius: width * 0.36
     readonly property real labelSize: Style.labelSize(width)
     readonly property real captionSize: Style.captionSize(width)
+    readonly property bool compact: width < Style.COMPACT_WIDTH
+
+    // Season labels clear the hollow station rings (r = 0.017w in orbit.frag)
+    // by a fixed pixel gap at every widget size.
+    readonly property real seasonLabelRadius: root.orbitRadius + root.width * 0.024 + 3
 
     implicitWidth: 230
     implicitHeight: Math.round(width * 1.08)
@@ -65,19 +70,21 @@ Item {
     // Season labels at all four cardinal orbital points around the flat ring.
     Repeater {
         model: [
-            { "label": "MAR", "angle": 0.0,           "factor": 1.21 },
-            { "label": "JUN", "angle": Math.PI * 0.5, "factor": 1.21 },
-            { "label": "SEP", "angle": Math.PI,       "factor": 1.21 },
-            { "label": "DEC", "angle": Math.PI * 1.5, "factor": 1.21 }
+            { "label": "MAR", "angle": 0.0 },
+            { "label": "JUN", "angle": Math.PI * 0.5 },
+            { "label": "SEP", "angle": Math.PI },
+            { "label": "DEC", "angle": Math.PI * 1.5 }
         ]
 
         delegate: Text {
             required property var modelData
 
-            readonly property point labelPoint: root.labelPointAt(modelData.angle, modelData.factor)
+            readonly property point origin: Style.labelOrigin(root.width * 0.5, root.width * 0.5,
+                                                              root.seasonLabelRadius, modelData.angle,
+                                                              width, height)
 
-            x: labelPoint.x - width * 0.5
-            y: labelPoint.y - height * 0.5
+            x: origin.x
+            y: origin.y
 
             text: modelData.label
             color: Style.ink(Style.LABEL_ALPHA)
@@ -110,12 +117,15 @@ Item {
         visible: root.showTelemetry
         centerX: root.width * 0.5
         centerY: root.width * 0.5
-        // Seated outside the DEC season label (0.436w) so the two never touch.
-        arcRadius: root.width * Style.CAPTION_RADIUS
+        // Seated outside the DEC season label so the two never touch.
+        arcRadius: Math.max(root.width * Style.CAPTION_RADIUS,
+                            root.seasonLabelRadius + root.labelSize * 1.2 + root.captionSize * 0.7)
 
-        text: root.seasonName.toUpperCase()
-              + "  \u2022  DAY " + root.dayOfYear + " / " + root.daysInYear
-              + "  \u2022  " + (root.yearProgress * 100).toFixed(1) + "%"
+        text: root.compact
+              ? root.seasonName.toUpperCase() + "  \u2022  " + root.dayOfYear + "/" + root.daysInYear
+              : root.seasonName.toUpperCase()
+                + "  \u2022  DAY " + root.dayOfYear + " / " + root.daysInYear
+                + "  \u2022  " + (root.yearProgress * 100).toFixed(1) + "%"
 
         color: Style.ink(Style.CAPTION_ALPHA)
         pixelSize: root.captionSize

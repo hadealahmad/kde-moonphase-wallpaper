@@ -63,7 +63,9 @@ void main() {
     }
 
     // Exact same limb anti-aliasing and halo-free silhouette as moon.frag
-    float edgeAlpha = 1.0 - smoothstep(0.993, 1.0, r);
+    // Limb anti-aliasing at least 1.5 px wide, so small globes stay smooth.
+    float limbAA = max(0.007, fwidth(r) * 1.5);
+    float edgeAlpha = 1.0 - smoothstep(1.0 - limbAA, 1.0, r);
     if (edgeAlpha <= 0.0) {
         fragColor = shell;
         return;

@@ -56,3 +56,41 @@ function captionTracking(pixelSize) {
 function labelTracking(pixelSize) {
     return Math.max(0.5, pixelSize * 0.08);
 }
+
+// --- Moon frame captions -----------------------------------------------------
+// The background bezel scales with the Moon (background.frag: frame ring at
+// 1.178 x Moon radius, major ticks reaching 0.011 x height x clamp(k)), so the
+// curved captions ride just outside the ticks, clamped so they never leave
+// the screen.
+function moonCaptionSize(moonSize, sceneHeight) {
+    return Math.max(9, Math.round(Math.min(moonSize * 0.026, sceneHeight * 0.017)));
+}
+
+function moonCaptionRadius(moonSize, sceneHeight, pixelSize) {
+    var k = moonSize / (0.45 * Math.max(1, sceneHeight));
+    var frame = moonSize * 0.589;
+    var ticks = 0.011 * Math.max(0.6, Math.min(1.4, k)) * sceneHeight;
+    var preferred = Math.max(moonSize * 0.662, frame + ticks + pixelSize * 0.6 + 3);
+    return Math.min(preferred, sceneHeight * 0.5 - pixelSize * 1.2);
+}
+
+// False when a huge Moon leaves no room outside its limb for the caption.
+function moonCaptionFits(moonSize, sceneHeight, pixelSize) {
+    return moonCaptionRadius(moonSize, sceneHeight, pixelSize) >= moonSize * 0.5 + pixelSize * 1.1;
+}
+
+// --- Corner instruments ------------------------------------------------------
+// Below this width the curved captions drop secondary fields so they keep a
+// comfortable arc instead of wrapping half-way around the dial.
+var COMPACT_WIDTH = 200;
+
+// Places a label just outside radius `r` (px) at angle `theta`, pushing it
+// out by half its own extent so its inner edge, not its centre, sits on the
+// ring. Returns the label's top-left corner.
+function labelOrigin(cx, cy, r, theta, labelWidth, labelHeight) {
+    var c = Math.cos(theta);
+    var s = Math.sin(theta);
+    var x = cx + r * c + c * labelWidth * 0.5;
+    var y = cy - r * s - s * labelHeight * 0.5;
+    return Qt.point(x - labelWidth * 0.5, y - labelHeight * 0.5);
+}

@@ -25,7 +25,7 @@ ifeq ($(strip $(PACKAGE_VERSION)),)
 $(error Could not read KPlugin.Version from metadata.json)
 endif
 
-.PHONY: all shader install package package-test clean smoke preview preview-full test
+.PHONY: all shader install package package-test clean smoke preview preview-full preview-layouts test
 
 all: shader
 
@@ -73,6 +73,12 @@ preview: shader
 preview-full: shader
 	mkdir -p /tmp/opencode/full_wallpaper
 	xvfb-run -a env QSG_RHI_BACKEND=opengl qml6 tests/render_full_wallpaper.qml
+
+# Render the scene across screen sizes, Moon scales, corner sizes/margins and
+# enabled-widget combinations into /tmp/opencode/layouts/.
+preview-layouts: shader
+	mkdir -p /tmp/opencode/layouts
+	xvfb-run -a -s "-screen 0 3840x2160x24" env QSG_RHI_BACKEND=opengl qml6 tests/render_layouts.qml
 
 # Pure-JS ephemeris tests (no Qt required).
 test:

@@ -36,6 +36,7 @@ Item {
     readonly property real observerLatRad: root.observerLatDeg * Math.PI / 180.0
     readonly property real observerLonRad: root.observerLonDeg * Math.PI / 180.0
     readonly property real captionSize: Style.captionSize(width)
+    readonly property bool compact: width < Style.COMPACT_WIDTH
     readonly property bool texturesReady: dayImage.status === Image.Ready
                                           && normalImage.status === Image.Ready
 
@@ -181,9 +182,11 @@ Item {
         // instruments' radius.
         arcRadius: root.width * Style.CAPTION_RADIUS
 
-        text: root.formatLatitude(root.observerLatDeg) + ", "
+        text: root.formatLatitude(root.observerLatDeg)
+              + (root.compact ? " " : ", ")
               + root.formatLongitude(root.observerLonDeg)
-              + "  \u2022  SOLAR " + root.formatSolarTime(root.localSolarTimeHours)
+              + (root.compact ? "  \u2022  " : "  \u2022  SOLAR ")
+              + root.formatSolarTime(root.localSolarTimeHours)
 
         color: Style.ink(Style.CAPTION_ALPHA)
         pixelSize: root.captionSize
