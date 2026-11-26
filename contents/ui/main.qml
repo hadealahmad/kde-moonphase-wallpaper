@@ -337,6 +337,12 @@ WallpaperItem {
         intensity: root.seasonalBackgroundIntensity
         fps: root.seasonalBackgroundFps
         moonIllumination: root.moonState ? root.moonState.illumination : 0.5
+        moonDiameter: root.moonSize
+        cornerSize: root.cornerSize
+        cornerMargin: root.cornerMargin
+        plateTopRight: prayerClockWidget.visible
+        plateBottomLeft: orbitWidget.visible
+        plateBottomRight: earthWidget.visible
     }
 
     Item {

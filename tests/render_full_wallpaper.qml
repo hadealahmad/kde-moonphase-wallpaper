@@ -133,6 +133,12 @@ Window {
             time: 42.0
             intensity: 0.75
             moonIllumination: window.moonState ? window.moonState.illumination : 0.5
+            moonDiameter: moonContainer.width
+            cornerSize: window.cornerSize
+            cornerMargin: window.cornerMargin
+            plateTopRight: true
+            plateBottomLeft: true
+            plateBottomRight: true
         }
 
         // --- Moon ----------------------------------------------------------

@@ -63,6 +63,24 @@ Item {
         return "-" + String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
     }
 
+    // PM prayer glyphs ride just inside the cardinal labels, so a label steps
+    // aside whenever a glyph lands on its quarter (Dhuhr near 12, Maghrib
+    // near 18, and so on).
+    function cardinalLabelClear(labelHour) {
+        var pm = [root.dhuhrHours, root.asrHours, root.maghribHours, root.ishaHours];
+        for (var i = 0; i < pm.length; i++) {
+            var h = pm[i];
+            if (!isFinite(h) || h < 12.0) {
+                continue;
+            }
+            var delta = Math.abs(((h - labelHour) % 12.0 + 18.0) % 12.0 - 6.0);
+            if (delta < 0.85) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     function prayerColor(index, hours) {
         if (index === root.nextPrayerIndex) {
             return Qt.rgba(1.0, 0.949, 0.8, 0.96);          // warm gold/white
@@ -273,10 +291,10 @@ Item {
     // twin AM/PM hour that shares that quarter of the dial.
     Repeater {
         model: [
-            { "label": "00\u00b712", "angle": Math.PI * 0.5 },
-            { "label": "03\u00b715", "angle": 0.0 },
-            { "label": "06\u00b718", "angle": Math.PI * 1.5 },
-            { "label": "09\u00b721", "angle": Math.PI }
+            { "label": "00\u00b712", "angle": Math.PI * 0.5, "hour": 0 },
+            { "label": "03\u00b715", "angle": 0.0,           "hour": 3 },
+            { "label": "06\u00b718", "angle": Math.PI * 1.5, "hour": 6 },
+            { "label": "09\u00b721", "angle": Math.PI,       "hour": 9 }
         ]
 
         delegate: Text {
@@ -287,6 +305,7 @@ Item {
             x: labelPoint.x - width * 0.5
             y: labelPoint.y - height * 0.5
 
+            visible: root.cardinalLabelClear(modelData.hour)
             text: modelData.label
             color: Qt.rgba(0.86, 0.88, 0.92, 0.46)
             font.family: Kirigami.Theme.defaultFont.family
@@ -302,7 +321,7 @@ Item {
         visible: root.showTelemetry
         centerX: root.width * 0.5
         centerY: root.width * 0.5
-        arcRadius: root.width * 0.518
+        arcRadius: root.width * 0.535
 
         text: root.nextPrayerName.toUpperCase()
               + " " + root.formatHHMM(root.nextPrayerHours)

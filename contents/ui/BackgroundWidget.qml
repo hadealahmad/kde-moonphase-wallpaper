@@ -29,6 +29,18 @@ Item {
     property real resolutionScale: 1.0
     property real time: 0.0
 
+    // Moon disc diameter in pixels; drives the soft lunar halo (0 disables it).
+    property real moonDiameter: 0.0
+
+    // Corner instrument layout, mirrored from main.qml so the sky can be
+    // quietened behind each enabled widget. Bottom widgets are 1.08x taller
+    // than wide with the dial on top, so their dial centre sits higher.
+    property int cornerSize: 230
+    property int cornerMargin: 36
+    property bool plateTopRight: false
+    property bool plateBottomLeft: false
+    property bool plateBottomRight: false
+
     readonly property bool shaderActive: root.seasonIndex >= 0 && root.intensity > 0.001
 
     // --- Solid fallback -----------------------------------------------------
@@ -62,6 +74,17 @@ Item {
         property real intensity: root.intensity
         property real moonIllumination: root.moonIllumination
         property real styleMode: root.styleMode
+        property real moonRadius: root.height > 0 ? root.moonDiameter * 0.5 / root.height : 0.0
+        property vector4d cornerPlate: root.height > 0
+            ? Qt.vector4d(0.5 * root.width / root.height - (root.cornerMargin + root.cornerSize * 0.5) / root.height,
+                          0.5 - (root.cornerMargin + root.cornerSize * 0.5) / root.height,
+                          -0.5 + (root.cornerMargin + root.cornerSize * 0.58) / root.height,
+                          root.cornerSize * 0.57 / root.height)
+            : Qt.vector4d(0, 0, 0, 0)
+        property vector4d cornerMask: Qt.vector4d(root.plateTopRight ? 1 : 0,
+                                                  root.plateBottomLeft ? 1 : 0,
+                                                  root.plateBottomRight ? 1 : 0,
+                                                  0)
 
         fragmentShader: Qt.resolvedUrl("../shaders/background.frag.qsb")
     }
