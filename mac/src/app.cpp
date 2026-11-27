@@ -429,7 +429,9 @@ void App::settings() {
         {"DebugDayOfYearOverride","Simulated day of year"}, {"DebugUTCHourOverride","Simulated UTC hour"},
         {"SeasonalBackgroundMode","Background season"}, {"SeasonalBackgroundStyle","Background style"},
         {"SeasonalBackgroundAnimate","Animate background"}, {"SeasonalBackgroundIntensity","Background intensity"},
-        {"SeasonalBackgroundFps","Background frames per second"}};
+        {"SeasonalBackgroundFps","Background frames per second"},
+        {"MilkyWayIntensity","Milky Way strength (1 = default)"}, {"MoonHaloIntensity","Moon glow strength (1 = default)"},
+        {"VignetteStrength","Edge shading strength (1 = default)"}};
     for (const auto &spec : specs_) {
         QWidget *control = nullptr;
         auto value = config_.value(spec.key);

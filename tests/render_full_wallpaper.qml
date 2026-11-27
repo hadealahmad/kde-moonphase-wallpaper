@@ -18,6 +18,7 @@ import "../contents/ui" as UI
 import "../contents/code/astronomy.js" as Astronomy
 import "../contents/code/hijri.js" as Hijri
 import "../contents/code/prayer.js" as Prayer
+import "../contents/code/style.js" as Style
 
 Window {
     id: window
@@ -133,6 +134,12 @@ Window {
             time: 42.0
             intensity: 0.75
             moonIllumination: window.moonState ? window.moonState.illumination : 0.5
+            moonDiameter: moonContainer.width
+            cornerSize: window.cornerSize
+            cornerMargin: window.cornerMargin
+            plateTopRight: true
+            plateBottomLeft: true
+            plateBottomRight: true
         }
 
         // --- Moon ----------------------------------------------------------
@@ -184,7 +191,7 @@ Window {
             anchors.fill: parent
             centerX: scene.width * 0.5
             centerY: scene.height * 0.5
-            arcRadius: Math.max(moonContainer.width * 0.465, scene.height * 0.298)
+            arcRadius: Style.moonCaptionRadius(moonContainer.width, scene.height, Style.moonCaptionSize(moonContainer.width, scene.height))
 
             text: window.moonState
                   ? (window.moonState.phaseName.toUpperCase()
@@ -195,7 +202,7 @@ Window {
                   : ""
 
             color: Qt.rgba(0.86, 0.88, 0.92, 0.58)
-            pixelSize: Math.max(9, Math.round(moonContainer.width * 0.026))
+            pixelSize: Style.moonCaptionSize(moonContainer.width, scene.height)
             fontWeight: Font.Light
             letterSpacing: Math.max(1.2, moonContainer.width * 0.004)
         }
@@ -204,7 +211,7 @@ Window {
             anchors.fill: parent
             centerX: scene.width * 0.5
             centerY: scene.height * 0.5
-            arcRadius: Math.max(moonContainer.width * 0.465, scene.height * 0.298)
+            arcRadius: Style.moonCaptionRadius(moonContainer.width, scene.height, Style.moonCaptionSize(moonContainer.width, scene.height))
             arcSide: "top"
 
             text: window.hijriDate
@@ -212,7 +219,7 @@ Window {
                   : ""
 
             color: Qt.rgba(0.86, 0.88, 0.92, 0.58)
-            pixelSize: Math.max(9, Math.round(moonContainer.width * 0.026))
+            pixelSize: Style.moonCaptionSize(moonContainer.width, scene.height)
             fontWeight: Font.Light
             letterSpacing: Math.max(1.2, moonContainer.width * 0.004)
         }

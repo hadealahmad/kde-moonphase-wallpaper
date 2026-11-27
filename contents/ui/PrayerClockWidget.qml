@@ -12,6 +12,8 @@ import QtQuick
 
 import org.kde.kirigami as Kirigami
 
+import "../code/style.js" as Style
+
 Item {
     id: root
 
@@ -34,8 +36,13 @@ Item {
     // --- Geometry (matches prayer_clock.frag) -------------------------------
     readonly property real innerRadius: width * 0.245
     readonly property real outerRadius: width * 0.365
-    readonly property real labelSize: Math.max(7, Math.round(width * 0.039))
-    readonly property real captionSize: Math.max(7, Math.round(width * 0.040))
+    readonly property real labelSize: Style.labelSize(width)
+    readonly property real captionSize: Style.captionSize(width)
+    readonly property bool compact: width < Style.COMPACT_WIDTH
+
+    // Cardinal labels sit just outside the bezel ring (r = 0.415w in
+    // prayer_clock.frag), inner edge first, at every widget size.
+    readonly property real cardinalLabelRadius: root.width * 0.415 + 3
 
     implicitWidth: 230
     implicitHeight: Math.round(width * 1.08)
@@ -305,19 +312,22 @@ Item {
         delegate: Text {
             required property var modelData
 
-            readonly property point labelPoint: root.pointOnRing(root.width * 0.440, modelData.angle)
-            // Afternoon prayer glyphs sit at 0.422w, right on this label's
-            // radius; slide the label along the ring when one comes close.
+            readonly property point origin: Style.labelOrigin(root.width * 0.5, root.width * 0.5,
+                                                              root.cardinalLabelRadius, modelData.angle,
+                                                              width, height)
+            // Afternoon prayer glyphs sit at 0.422w, just inside this label;
+            // slide the label along the ring when one comes close.
             readonly property real nudge: root.cardinalNudge(modelData.angle)
 
-            x: labelPoint.x - width * 0.5 + nudge * Math.sin(modelData.angle)
-            y: labelPoint.y - height * 0.5 + nudge * Math.cos(modelData.angle)
+            x: origin.x + nudge * Math.sin(modelData.angle)
+            y: origin.y + nudge * Math.cos(modelData.angle)
 
             text: modelData.label
-            color: Qt.rgba(0.86, 0.88, 0.92, 0.46)
+            color: Style.ink(Style.LABEL_ALPHA)
             font.family: Kirigami.Theme.defaultFont.family
             font.pixelSize: root.labelSize
-            font.letterSpacing: 0.6
+            font.weight: Font.Medium
+            font.letterSpacing: Style.labelTracking(root.labelSize)
         }
     }
 
@@ -328,17 +338,18 @@ Item {
         visible: root.showTelemetry
         centerX: root.width * 0.5
         centerY: root.width * 0.5
-        arcRadius: root.width * 0.518
+        arcRadius: Math.max(root.width * Style.CAPTION_RADIUS,
+                            root.cardinalLabelRadius + root.labelSize * 1.2 + root.captionSize * 0.7)
 
         text: root.nextPrayerName.toUpperCase()
               + " " + root.formatHHMM(root.nextPrayerHours)
-              + " (" + root.formatCountdown(root.minutesToNextPrayer) + ")"
+              + (root.compact ? "" : " (" + root.formatCountdown(root.minutesToNextPrayer) + ")")
               + "  \u2022  " + root.formatHHMM(root.localTimeHours)
 
-        color: Qt.rgba(0.86, 0.88, 0.92, 0.58)
+        color: Style.ink(Style.CAPTION_ALPHA)
         fontFamily: Kirigami.Theme.defaultFont.family
         pixelSize: root.captionSize
-        fontWeight: Font.Light
-        letterSpacing: 0.9
+        fontWeight: Font.Normal
+        letterSpacing: Style.captionTracking(root.captionSize)
     }
 }

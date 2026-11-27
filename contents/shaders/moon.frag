@@ -59,7 +59,9 @@ void main()
     float r2 = dot(p, p);
     float r  = sqrt(r2);
 
-    float alpha = 1.0 - smoothstep(0.993, 1.0, r);
+    // Limb anti-aliasing at least 1.5 px wide, so small Moons stay smooth.
+    float limbAA = max(0.007, fwidth(r) * 1.5);
+    float alpha = 1.0 - smoothstep(1.0 - limbAA, 1.0, r);
     if (alpha <= 0.0)
         discard;
 

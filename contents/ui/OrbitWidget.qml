@@ -10,6 +10,8 @@ import QtQuick
 
 import org.kde.kirigami as Kirigami
 
+import "../code/style.js" as Style
+
 Item {
     id: root
 
@@ -28,8 +30,13 @@ Item {
 
     // --- Geometry (flat circular top-down projection) -----------------------
     readonly property real orbitRadius: width * 0.36
-    readonly property real labelSize: Math.max(7, Math.round(width * 0.039))
-    readonly property real captionSize: Math.max(7, Math.round(width * 0.040))
+    readonly property real labelSize: Style.labelSize(width)
+    readonly property real captionSize: Style.captionSize(width)
+    readonly property bool compact: width < Style.COMPACT_WIDTH
+
+    // Season labels clear the hollow station rings (r = 0.017w in orbit.frag)
+    // by a fixed pixel gap at every widget size.
+    readonly property real seasonLabelRadius: root.orbitRadius + root.width * 0.024 + 3
 
     implicitWidth: 230
     implicitHeight: Math.round(width * 1.08)
@@ -63,27 +70,28 @@ Item {
     // Season labels at all four cardinal orbital points around the flat ring.
     Repeater {
         model: [
-            { "label": "MAR", "angle": 0.0,           "factor": 1.21 },
-            { "label": "JUN", "angle": Math.PI * 0.5, "factor": 1.21 },
-            { "label": "SEP", "angle": Math.PI,       "factor": 1.21 },
-            { "label": "DEC", "angle": Math.PI * 1.5, "factor": 1.21 }
+            { "label": "MAR", "angle": 0.0 },
+            { "label": "JUN", "angle": Math.PI * 0.5 },
+            { "label": "SEP", "angle": Math.PI },
+            { "label": "DEC", "angle": Math.PI * 1.5 }
         ]
 
         delegate: Text {
             required property var modelData
 
-            readonly property point labelPoint: root.labelPointAt(modelData.angle, modelData.factor)
+            readonly property point origin: Style.labelOrigin(root.width * 0.5, root.width * 0.5,
+                                                              root.seasonLabelRadius, modelData.angle,
+                                                              width, height)
 
-            x: labelPoint.x - width * 0.5
-            y: labelPoint.y - height * 0.5
+            x: origin.x
+            y: origin.y
 
             text: modelData.label
-            color: Qt.rgba(0.86, 0.88, 0.92, 0.50)
+            color: Style.ink(Style.LABEL_ALPHA)
             font.family: Kirigami.Theme.defaultFont.family
             font.pixelSize: root.labelSize
             font.weight: Font.Medium
-            font.letterSpacing: 0.9
-            renderType: Text.NativeRendering
+            font.letterSpacing: Style.labelTracking(root.labelSize)
         }
     }
 
@@ -95,12 +103,11 @@ Item {
         y: jan1Point.y - height * 0.5
 
         text: "JAN 1"
-        color: Qt.rgba(0.95, 0.80, 0.45, 0.50)
+        color: Style.accent(Style.MINOR_ALPHA)
         font.family: Kirigami.Theme.defaultFont.family
-        font.pixelSize: Math.max(6, Math.round(root.labelSize * 0.82))
-        font.weight: Font.Normal
-        font.letterSpacing: 0.6
-        renderType: Text.NativeRendering
+        font.pixelSize: Style.minorSize(root.width)
+        font.weight: Font.Medium
+        font.letterSpacing: Style.labelTracking(Style.minorSize(root.width))
     }
 
     CurvedText {
@@ -110,16 +117,19 @@ Item {
         visible: root.showTelemetry
         centerX: root.width * 0.5
         centerY: root.width * 0.5
-        // Clear of the DEC label, which sits at 1.21 × orbitRadius (0.436w).
-        arcRadius: root.width * 0.505
+        // Seated outside the DEC season label so the two never touch.
+        arcRadius: Math.max(root.width * Style.CAPTION_RADIUS,
+                            root.seasonLabelRadius + root.labelSize * 1.2 + root.captionSize * 0.7)
 
-        text: root.seasonName.toUpperCase()
-              + "  \u2022  DAY " + root.dayOfYear + " / " + root.daysInYear
-              + "  \u2022  " + (root.yearProgress * 100).toFixed(1) + "%"
+        text: root.compact
+              ? root.seasonName.toUpperCase() + "  \u2022  " + root.dayOfYear + "/" + root.daysInYear
+              : root.seasonName.toUpperCase()
+                + "  \u2022  DAY " + root.dayOfYear + " / " + root.daysInYear
+                + "  \u2022  " + (root.yearProgress * 100).toFixed(1) + "%"
 
-        color: Qt.rgba(0.86, 0.88, 0.92, 0.58)
+        color: Style.ink(Style.CAPTION_ALPHA)
         pixelSize: root.captionSize
         fontWeight: Font.Normal
-        letterSpacing: 0.7
+        letterSpacing: Style.captionTracking(root.captionSize)
     }
 }

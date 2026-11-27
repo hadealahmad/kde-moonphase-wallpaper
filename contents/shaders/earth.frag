@@ -19,22 +19,17 @@ layout(binding = 2) uniform sampler2D normalSource;
 
 const float PI = 3.14159265358979323846;
 
+// The globe fills GLOBE_SCALE of the quad; the band outside it carries a thin
+// sun-weighted atmospheric glow.
+const float GLOBE_SCALE = 0.92;
+const vec3 ATMO_COLOR = vec3(0.40, 0.62, 1.00);
+
 void main() {
-    vec2 p = qt_TexCoord0 * 2.0 - 1.0;
+    vec2 p = (qt_TexCoord0 * 2.0 - 1.0) / GLOBE_SCALE;
     p.y = -p.y;
 
     float r2 = dot(p, p);
     float r = sqrt(r2);
-
-    // Exact same limb anti-aliasing and halo-free silhouette as moon.frag
-    float edgeAlpha = 1.0 - smoothstep(0.993, 1.0, r);
-    if (edgeAlpha <= 0.0) {
-        fragColor = vec4(0.0);
-        return;
-    }
-
-    float z = sqrt(max(0.0, 1.0 - r2));
-    vec3 Nv = normalize(vec3(p.x, p.y, z));
 
     // Observer-centred orthographic camera basis (Z = North, X = 0°E, Y = 90°E)
     float cosLat = cos(ubuf.observerLatRad);
@@ -45,6 +40,39 @@ void main() {
     vec3 F = vec3(cosLat * cosLon, cosLat * sinLon, sinLat);
     vec3 R = vec3(-sinLon, cosLon, 0.0);
     vec3 U = vec3(-sinLat * cosLon, -sinLat * sinLon, cosLat);
+
+    // astronomy.js outputs sunVectorWorld in Y-up (X=90°E, Y=North, Z=0°E).
+    // Convert to our Z-up world frame (X=0°E, Y=90°E, Z=North):
+    vec3 Lw = (length(ubuf.sunVectorWorld) > 0.0001)
+              ? normalize(vec3(ubuf.sunVectorWorld.z, ubuf.sunVectorWorld.x, ubuf.sunVectorWorld.y))
+              : vec3(1.0, 0.0, 0.0);
+    vec3 Lv = vec3(dot(Lw, R), dot(Lw, U), dot(Lw, F));
+    float atmo = clamp(ubuf.atmosphereIntensity, 0.0, 1.5);
+
+    // Outer atmospheric shell: brightest on the sunward limb, with a faint
+    // forward-scattering ring when the Sun sits behind the globe.
+    vec4 shell = vec4(0.0);
+    if (r > 0.97) {
+        vec2 dir = p / max(r, 1e-4);
+        float h = clamp((r - 1.0) / (1.0 / GLOBE_SCALE - 1.0), 0.0, 1.0);
+        float sunward = smoothstep(-0.30, 0.65, dot(dir, Lv.xy) + 0.25 * Lv.z);
+        float backlit = smoothstep(0.0, -0.8, Lv.z) * 0.35;
+        float falloff = exp(-h * 4.5) * (1.0 - smoothstep(0.85, 1.0, h));
+        float a = clamp(falloff * (sunward + backlit) * 0.50 * atmo, 0.0, 1.0);
+        shell = vec4(ATMO_COLOR * a, a) * ubuf.qt_Opacity;
+    }
+
+    // Exact same limb anti-aliasing and halo-free silhouette as moon.frag
+    // Limb anti-aliasing at least 1.5 px wide, so small globes stay smooth.
+    float limbAA = max(0.007, fwidth(r) * 1.5);
+    float edgeAlpha = 1.0 - smoothstep(1.0 - limbAA, 1.0, r);
+    if (edgeAlpha <= 0.0) {
+        fragColor = shell;
+        return;
+    }
+
+    float z = sqrt(max(0.0, 1.0 - r2));
+    vec3 Nv = normalize(vec3(p.x, p.y, z));
 
     vec3 Nw = normalize(Nv.x * R + Nv.y * U + Nv.z * F);
 
@@ -89,12 +117,6 @@ void main() {
     float iceFactor = smoothstep(0.26, 0.52, rawLuma) * smoothstep(0.55, 0.80, abs(Nw.z));
     baseAlbedo = mix(baseAlbedo, vec3(0.32, 0.34, 0.38), iceFactor * 0.55);
 
-    // astronomy.js outputs sunVectorWorld in Y-up (X=90°E, Y=North, Z=0°E).
-    // Convert to our Z-up world frame (X=0°E, Y=90°E, Z=North):
-    vec3 Lw = (length(ubuf.sunVectorWorld) > 0.0001)
-              ? normalize(vec3(ubuf.sunVectorWorld.z, ubuf.sunVectorWorld.x, ubuf.sunVectorWorld.y))
-              : vec3(1.0, 0.0, 0.0);
-
     // Macro sphere N·L for the global terminator, plus normal-mapped N·L for relief
     float ndotlMacro = dot(Nw, Lw);
     float ndotlRelief = dot(N, Lw);
@@ -135,8 +157,13 @@ void main() {
         color = mix(color, retCol, clamp(retRing * 0.55 + retDot * 0.85, 0.0, 1.0));
     }
 
+    // Inner limb scattering: a thin blue veil hugging the sunlit edge.
+    float limbVeil = pow(1.0 - mu, 2.6) * smoothstep(-0.15, 0.35, ndotlMacro);
+    color += ATMO_COLOR * limbVeil * 0.16 * atmo;
+
     color = color / (1.0 + 0.35 * color);
     vec3 srgb = pow(max(color, vec3(0.0)), vec3(1.0 / 2.2));
     float alpha = edgeAlpha * ubuf.qt_Opacity;
-    fragColor = vec4(srgb * alpha, alpha);
+    // Globe composited over the atmospheric shell (premultiplied "over").
+    fragColor = vec4(srgb * alpha, alpha) + shell * (1.0 - alpha);
 }

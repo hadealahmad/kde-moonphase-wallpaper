@@ -12,6 +12,7 @@ import org.kde.plasma.plasmoid
 import "../code/astronomy.js" as Astronomy
 import "../code/hijri.js" as Hijri
 import "../code/prayer.js" as Prayer
+import "../code/style.js" as Style
 
 WallpaperItem {
     id: root
@@ -210,6 +211,12 @@ WallpaperItem {
         const c = root.configuration.BackgroundColor;
         return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
     }
+    readonly property int moonCaptionSize: Style.moonCaptionSize(root.moonSize, root.height)
+    readonly property real moonCaptionRadius: Style.moonCaptionRadius(root.moonSize, root.height,
+                                                                      root.moonCaptionSize)
+    readonly property bool moonCaptionFits: Style.moonCaptionFits(root.moonSize, root.height,
+                                                                  root.moonCaptionSize)
+
     readonly property color telemetryColor: root.backgroundLuminance > 0.5
                                             ? Qt.rgba(0.0, 0.0, 0.0, 0.58)
                                             : Qt.rgba(0.86, 0.88, 0.92, 0.58)
@@ -337,6 +344,18 @@ WallpaperItem {
         intensity: root.seasonalBackgroundIntensity
         fps: root.seasonalBackgroundFps
         moonIllumination: root.moonState ? root.moonState.illumination : 0.5
+        moonDiameter: root.moonSize
+        milkyWayIntensity: root.configuration.MilkyWayIntensity !== undefined
+                           ? Number(root.configuration.MilkyWayIntensity) : 1.0
+        haloIntensity: root.configuration.MoonHaloIntensity !== undefined
+                       ? Number(root.configuration.MoonHaloIntensity) : 1.0
+        vignetteStrength: root.configuration.VignetteStrength !== undefined
+                          ? Number(root.configuration.VignetteStrength) : 1.0
+        cornerSize: root.cornerSize
+        cornerMargin: root.cornerMargin
+        plateTopRight: prayerClockWidget.visible
+        plateBottomLeft: orbitWidget.visible
+        plateBottomRight: earthWidget.visible
     }
 
     Item {
@@ -422,10 +441,10 @@ WallpaperItem {
         id: telemetry
 
         anchors.fill: parent
-        visible: root.configuration.ShowTelemetryOverlay
+        visible: root.configuration.ShowTelemetryOverlay && root.moonCaptionFits
         centerX: root.width * 0.5
         centerY: root.height * 0.5
-        arcRadius: Math.max(root.moonSize * 0.465, root.height * 0.298)
+        arcRadius: root.moonCaptionRadius
 
         text: root.moonState.phaseName.toUpperCase()
               + "  \u2022  " + (root.moonState.illumination * 100).toFixed(1) + "%"
@@ -434,7 +453,7 @@ WallpaperItem {
 
         color: root.telemetryColor
         fontFamily: Kirigami.Theme.defaultFont.family
-        pixelSize: Math.max(9, Math.round(root.moonSize * 0.026))
+        pixelSize: root.moonCaptionSize
         fontWeight: Font.Light
         letterSpacing: Math.max(1.2, root.moonSize * 0.004)
         textStyle: Text.Raised
@@ -447,17 +466,17 @@ WallpaperItem {
         id: hijriHeader
 
         anchors.fill: parent
-        visible: root.configuration.ShowTelemetryOverlay
+        visible: root.configuration.ShowTelemetryOverlay && root.moonCaptionFits
         centerX: root.width * 0.5
         centerY: root.height * 0.5
-        arcRadius: Math.max(root.moonSize * 0.465, root.height * 0.298)
+        arcRadius: root.moonCaptionRadius
         arcSide: "top"
 
         text: root.hijriMonthYearLabel
 
         color: root.telemetryColor
         fontFamily: Kirigami.Theme.defaultFont.family
-        pixelSize: Math.max(9, Math.round(root.moonSize * 0.026))
+        pixelSize: root.moonCaptionSize
         fontWeight: Font.Light
         letterSpacing: Math.max(1.2, root.moonSize * 0.004)
         textStyle: Text.Raised

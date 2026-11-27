@@ -11,6 +11,8 @@ import QtQuick
 
 import org.kde.kirigami as Kirigami
 
+import "../code/style.js" as Style
+
 Item {
     id: root
 
@@ -33,12 +35,13 @@ Item {
 
     readonly property real observerLatRad: root.observerLatDeg * Math.PI / 180.0
     readonly property real observerLonRad: root.observerLonDeg * Math.PI / 180.0
-    readonly property real captionSize: Math.max(7, Math.round(width * 0.040))
+    readonly property real captionSize: Style.captionSize(width)
+    readonly property bool compact: width < Style.COMPACT_WIDTH
     readonly property bool texturesReady: dayImage.status === Image.Ready
                                           && normalImage.status === Image.Ready
 
     implicitWidth: 230
-    implicitHeight: Math.round(width * 1.12)
+    implicitHeight: Math.round(width * 1.08)
 
     function requestRender() {
         if (!root.visible) {
@@ -174,15 +177,20 @@ Item {
         visible: root.showTelemetry
         centerX: root.width * 0.5
         centerY: root.width * 0.5
-        arcRadius: root.width * 0.560
+        // The globe fills 92% of the quad (earth.frag GLOBE_SCALE), with the
+        // atmosphere in the outer band, so the caption shares the other
+        // instruments' radius.
+        arcRadius: root.width * Style.CAPTION_RADIUS
 
-        text: root.formatLatitude(root.observerLatDeg) + ", "
+        text: root.formatLatitude(root.observerLatDeg)
+              + (root.compact ? " " : ", ")
               + root.formatLongitude(root.observerLonDeg)
-              + "  \u2022  SOLAR " + root.formatSolarTime(root.localSolarTimeHours)
+              + (root.compact ? "  \u2022  " : "  \u2022  SOLAR ")
+              + root.formatSolarTime(root.localSolarTimeHours)
 
-        color: Qt.rgba(0.86, 0.88, 0.92, 0.58)
+        color: Style.ink(Style.CAPTION_ALPHA)
         pixelSize: root.captionSize
         fontWeight: Font.Normal
-        letterSpacing: 0.7
+        letterSpacing: Style.captionTracking(root.captionSize)
     }
 }
